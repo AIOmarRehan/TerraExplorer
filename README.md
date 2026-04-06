@@ -66,4 +66,4 @@ Works on any static host (Vercel, Netlify, GitHub Pages). Just push all files ex
 
 ## License
 
-This project is licensed under the MIT License. Provided as-is for educational purposes. Made by Omar Rehan.
+This project is licensed under the MIT License. Made by Omar Rehan.
