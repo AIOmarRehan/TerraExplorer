@@ -1619,6 +1619,12 @@
       // --- Init ---
       renderVisitedPanel();
       renderHistoryPanel();
+
+      // Pre-fetch countries so flags show in visited/history panels immediately
+      fetchAllCountries().then(function () {
+        renderVisitedPanel();
+        renderHistoryPanel();
+      }).catch(function () {});
     })();
   </script>
 </body>
