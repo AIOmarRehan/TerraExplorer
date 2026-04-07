@@ -56,6 +56,247 @@
       flex-direction: column;
     }
 
+    /* ===== SPLASH SCREEN ===== */
+    .splash {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
+      background: linear-gradient(135deg, #0c0e2b 0%, #1a1145 40%, #0e355d 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+
+    .splash.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    /* Splash stars */
+    .splash-star {
+      position: absolute;
+      border-radius: 50%;
+      background: #fff;
+      opacity: 0;
+      animation: splashStarIn 0.6s ease forwards, splashTwinkle 2s ease-in-out 0.6s infinite;
+    }
+
+    .splash-star--blue { background: #8AC6FF; box-shadow: 0 0 8px 2px rgba(138,198,255,0.5); }
+    .splash-star--yellow { background: #F6E37D; box-shadow: 0 0 8px 2px rgba(246,227,125,0.5); }
+    .splash-star--red { background: #F56565; box-shadow: 0 0 8px 2px rgba(245,101,101,0.4); }
+    .splash-star--white { background: #fff; box-shadow: 0 0 6px 2px rgba(255,255,255,0.6); }
+
+    @keyframes splashStarIn {
+      0% { opacity: 0; transform: scale(0); }
+      60% { opacity: 1; transform: scale(1.5); }
+      100% { opacity: 0.9; transform: scale(1); }
+    }
+
+    @keyframes splashTwinkle {
+      0%, 100% { opacity: 0.9; }
+      50% { opacity: 0.2; }
+    }
+
+    /* Earth + Moon orbit */
+    .splash-scene {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      margin-bottom: 2rem;
+    }
+
+    .splash-earth {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100px;
+      height: 100px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #83E1ED 0%, #3A96B9 60%, #2E85A7 100%);
+      box-shadow:
+        inset -10px -8px 20px rgba(0,0,0,0.3),
+        0 0 40px rgba(58, 150, 185, 0.4),
+        0 0 80px rgba(58, 150, 185, 0.15);
+      overflow: hidden;
+    }
+
+    .splash-earth::before {
+      content: '';
+      position: absolute;
+      top: 12%;
+      left: 15%;
+      width: 30px;
+      height: 22px;
+      background: #85DA71;
+      border-radius: 40% 60% 50% 40%;
+      box-shadow:
+        25px 15px 0 6px #85DA71,
+        -5px 40px 0 8px #6AB25C,
+        30px 45px 0 4px #85DA71,
+        10px 60px 0 10px #6AB25C;
+    }
+
+    .splash-earth::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 45%;
+      background: rgba(46, 133, 167, 0.4);
+      border-radius: 0 0 50% 50%;
+    }
+
+    .splash-orbit {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 180px;
+      height: 180px;
+      transform: translate(-50%, -50%);
+      animation: orbitSpin 3s linear infinite;
+    }
+
+    @keyframes orbitSpin {
+      from { transform: translate(-50%, -50%) rotate(0deg); }
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    .splash-moon {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      width: 28px;
+      height: 28px;
+      margin-left: -14px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 35%, #f0f0f0 0%, #d8d8d8 50%, #a1a1a1 100%);
+      box-shadow:
+        inset -4px -3px 6px rgba(0,0,0,0.2),
+        0 0 15px rgba(255,255,255,0.3);
+    }
+
+    .splash-moon::before {
+      content: '';
+      position: absolute;
+      top: 6px;
+      left: 8px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(161,161,161,0.5);
+      box-shadow: 8px 8px 0 2px rgba(161,161,161,0.3), -2px 12px 0 1px rgba(161,161,161,0.4);
+    }
+
+    .splash-orbit-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 180px;
+      height: 180px;
+      transform: translate(-50%, -50%);
+      border: 1px dashed rgba(255,255,255,0.1);
+      border-radius: 50%;
+    }
+
+    /* Glow pulse behind earth */
+    .splash-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 140px;
+      height: 140px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(108,99,255,0.15) 0%, transparent 70%);
+      animation: glowPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes glowPulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+      50% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+    }
+
+    /* Text */
+    .splash-text {
+      text-align: center;
+      opacity: 0;
+      animation: splashTextIn 1s ease forwards 0.5s;
+    }
+
+    @keyframes splashTextIn {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .splash-welcome {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.35em;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 0.5rem;
+    }
+
+    .splash-title {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #fff 0%, #c7d2fe 50%, #6C63FF 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .splash-subtitle {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.4);
+      margin-top: 0.6rem;
+      opacity: 0;
+      animation: splashTextIn 1s ease forwards 1s;
+    }
+
+    .splash-loader {
+      margin-top: 2rem;
+      width: 120px;
+      height: 3px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      opacity: 0;
+      animation: splashTextIn 0.6s ease forwards 1.2s;
+    }
+
+    .splash-loader-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #6C63FF, #c7d2fe);
+      border-radius: 3px;
+      animation: splashLoad 2.5s ease-in-out forwards 1.4s;
+    }
+
+    @keyframes splashLoad {
+      0% { width: 0%; }
+      60% { width: 70%; }
+      100% { width: 100%; }
+    }
+
+    @media (max-width: 600px) {
+      .splash-title { font-size: 1.8rem; }
+      .splash-scene { width: 160px; height: 160px; }
+      .splash-earth { width: 80px; height: 80px; }
+      .splash-orbit, .splash-orbit-ring { width: 140px; height: 140px; }
+      .splash-moon { width: 22px; height: 22px; margin-left: -11px; top: -11px; }
+      .splash-glow { width: 110px; height: 110px; }
+    }
+
     /* ===== ANIMATED SVG BACKGROUND ===== */
     #background {
       position: fixed;
@@ -856,6 +1097,24 @@
   </style>
 </head>
 <body>
+  <!-- Splash Screen -->
+  <div class="splash" id="splashScreen">
+    <div class="splash-scene">
+      <div class="splash-glow"></div>
+      <div class="splash-orbit-ring"></div>
+      <div class="splash-earth"></div>
+      <div class="splash-orbit">
+        <div class="splash-moon"></div>
+      </div>
+    </div>
+    <div class="splash-text">
+      <div class="splash-welcome">Welcome to</div>
+      <div class="splash-title">TerraExplorer</div>
+      <div class="splash-subtitle">Discover the world, one country at a time</div>
+    </div>
+    <div class="splash-loader"><div class="splash-loader-bar"></div></div>
+  </div>
+
   <!-- Animated SVG Background -->
   <div id="background">
     <!-- CSS Stars (always visible, especially on mobile) -->
@@ -1126,6 +1385,33 @@
   <script src="config.js"></script>
   <script>
     (function () {
+      // --- Splash Screen ---
+      (function initSplash() {
+        var splash = document.getElementById('splashScreen');
+        if (!splash) return;
+        // Generate stars
+        var colors = ['splash-star--white','splash-star--blue','splash-star--yellow','splash-star--red'];
+        var sizes = [2, 3, 4, 2, 3];
+        for (var i = 0; i < 30; i++) {
+          var star = document.createElement('div');
+          star.className = 'splash-star ' + colors[i % colors.length];
+          star.style.left = (Math.random() * 100) + '%';
+          star.style.top = (Math.random() * 100) + '%';
+          var s = sizes[i % sizes.length];
+          star.style.width = s + 'px';
+          star.style.height = s + 'px';
+          star.style.animationDelay = (Math.random() * 2) + 's';
+          splash.appendChild(star);
+        }
+        // Dismiss after 4 seconds
+        setTimeout(function () {
+          splash.classList.add('hidden');
+          setTimeout(function () {
+            splash.remove();
+          }, 800);
+        }, 4000);
+      })();
+
       // --- State ---
       const apiKey = (typeof GEMINI_API_KEY !== 'undefined' && GEMINI_API_KEY !== 'YOUR_API_KEY_HERE') ? GEMINI_API_KEY : '';
       let countriesCache = null;
