@@ -388,6 +388,104 @@
       gap: 0.75rem;
     }
 
+    /* ===== HEADER NAV LINK ===== */
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      transition: background 0.3s, border-color 0.3s, transform 0.2s;
+      text-decoration: none;
+    }
+    .header-nav:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.25);
+      transform: scale(1.03);
+    }
+    [data-theme="light"] .header-nav {
+      background: rgba(255, 255, 255, 0.35);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+    [data-theme="light"] .header-nav:hover {
+      background: rgba(255, 255, 255, 0.55);
+    }
+    .header-nav-icon {
+      width: 1.6rem; height: 1.6rem;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .header-nav-icon lottie-player { width: 100%; height: 100%; }
+    .header-nav-text {
+      font-size: 0.78rem; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap;
+      background: linear-gradient(90deg, #a8a8ff 0%, #ffffff 35%, #c8c8ff 50%, #ffffff 65%, #a8a8ff 100%);
+      background-size: 200% 100%;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      animation: shineTextDark 3s linear infinite;
+      filter: drop-shadow(0 0 6px rgba(168, 168, 255, 0.4));
+    }
+    @keyframes shineTextDark {
+      0% { background-position: 200% center; }
+      100% { background-position: -200% center; }
+    }
+    [data-theme="light"] .header-nav-text {
+      background: linear-gradient(90deg, #6C63FF 0%, #9b59b6 30%, #6C63FF 50%, #8e44ad 70%, #6C63FF 100%);
+      background-size: 200% 100%;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      animation: shineTextLight 3s linear infinite;
+      filter: drop-shadow(0 0 4px rgba(108, 99, 255, 0.3));
+    }
+    @keyframes shineTextLight {
+      0% { background-position: 200% center; }
+      100% { background-position: -200% center; }
+    }
+    @media (max-width: 700px) {
+      .header-nav-text { display: none; }
+      .header-nav { padding: 0.3rem; border-radius: 50%; }
+      .header-nav-icon { width: 1.4rem; height: 1.4rem; }
+    }
+
+    @media (max-width: 500px) {
+      .header-nav-text { display: inline; font-size: 0.65rem; }
+      .header-nav { padding: 0.25rem 0.6rem; border-radius: 999px; }
+      .header-nav-icon { width: 1.1rem; height: 1.1rem; }
+    }
+
+    /* ===== Hamburger menu ===== */
+    .hamburger-btn {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.35rem;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 100;
+    }
+    .hamburger-btn span {
+      display: block;
+      width: 22px;
+      height: 2.5px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: all 0.3s ease;
+      transform-origin: center;
+    }
+    .hamburger-btn.open span:nth-child(1) {
+      transform: translateY(6.5px) rotate(45deg);
+    }
+    .hamburger-btn.open span:nth-child(2) {
+      opacity: 0;
+    }
+    .hamburger-btn.open span:nth-child(3) {
+      transform: translateY(-6.5px) rotate(-45deg);
+    }
+    .mobile-nav-link {
+      display: none;
+    }
+
     /* Theme Toggle */
     .theme-toggle {
       position: relative;
@@ -570,6 +668,15 @@
       animation: fadeInCard 0.5s ease;
     }
 
+    .country-card.visited-glow {
+      border-color: var(--success);
+      box-shadow: var(--shadow), 0 0 20px rgba(34, 197, 94, 0.25);
+    }
+
+    [data-theme="light"] .country-card.visited-glow {
+      box-shadow: var(--shadow), 0 0 20px rgba(34, 197, 94, 0.2);
+    }
+
     @keyframes fadeInCard {
       from { opacity: 0; transform: translateY(20px) scale(0.97); }
       to { opacity: 1; transform: translateY(0) scale(1); }
@@ -692,6 +799,85 @@
     [data-theme="light"] .dish-block strong {
       color: #f97316;
     }
+
+    .country-images { margin-bottom: 1rem; }
+    .country-images-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--text-on-card);
+    }
+    .country-images-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.4rem;
+      border-radius: 10px;
+      overflow: hidden;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+    .country-images-grid img {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.06);
+      transition: transform 0.2s;
+      cursor: pointer;
+    }
+    .country-images-grid img:hover { transform: scale(1.04); }
+    [data-theme="light"] .country-images-grid img {
+      background: rgba(0,0,0,0.05);
+    }
+
+    /* Lightbox */
+    /* Lightbox */
+    .img-lightbox {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.92); display: flex; align-items: center;
+      justify-content: center; z-index: 100000;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
+    .img-lightbox.open { opacity: 1; pointer-events: auto; }
+    .img-lightbox img {
+      max-width: 82vw; max-height: 88vh; border-radius: 10px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6); object-fit: contain;
+      transition: opacity 0.2s;
+    }
+    .img-lightbox img.loading { opacity: 0.3; }
+    .img-lightbox-close {
+      position: absolute; top: 18px; right: 24px; font-size: 2rem;
+      color: #fff; background: none; border: none; cursor: pointer;
+      opacity: 0.7; transition: opacity 0.2s; z-index: 2;
+    }
+    .img-lightbox-close:hover { opacity: 1; }
+    .img-lightbox-nav {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      background: rgba(255,255,255,0.15); border: none; color: #fff;
+      font-size: 2rem; width: 48px; height: 48px; border-radius: 50%;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      opacity: 0.7; transition: opacity 0.2s, background 0.2s; z-index: 2;
+    }
+    .img-lightbox-nav:hover { opacity: 1; background: rgba(255,255,255,0.3); }
+    .img-lightbox-prev { left: 16px; }
+    .img-lightbox-next { right: 16px; }
+    .img-lightbox-counter {
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,0.6); font-size: 0.85rem;
+    }
+    .country-images-refresh {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      background: none; border: 1px solid rgba(255,255,255,0.15);
+      color: var(--text-on-card); font-size: 0.75rem; padding: 0.25rem 0.6rem;
+      border-radius: 6px; cursor: pointer; opacity: 0.7; transition: opacity 0.2s;
+      margin-left: auto;
+    }
+    .country-images-refresh:hover { opacity: 1; }
+    [data-theme="light"] .country-images-refresh { border-color: rgba(0,0,0,0.15); }
+    .country-images-header {
+      display: flex; align-items: center; margin-bottom: 0.5rem;
+    }
+    .country-images-header .country-images-title { margin-bottom: 0; }
 
     .mark-visited-btn {
       margin-top: 1.5rem;
@@ -816,6 +1002,85 @@
       font-size: 0.8rem;
       color: var(--text-muted-card);
       font-weight: 400;
+    }
+
+    /* ===== COVERAGE SECTION ===== */
+    .coverage-section {
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      text-align: center;
+      color: var(--text-on-card);
+    }
+
+    [data-theme="light"] .coverage-section {
+      background: rgba(255, 255, 255, 0.45);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .coverage-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .coverage-number {
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--primary), var(--success));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.2;
+    }
+
+    .coverage-label {
+      font-size: 0.85rem;
+      color: var(--text-muted-card);
+      margin-top: 0.25rem;
+    }
+
+    .coverage-bar-wrap {
+      margin-top: 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      height: 8px;
+      overflow: hidden;
+    }
+
+    [data-theme="light"] .coverage-bar-wrap {
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    .coverage-bar {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--primary), var(--success));
+      transition: width 0.6s ease;
+      min-width: 0;
+    }
+
+    .coverage-link {
+      display: inline-block;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+      transition: opacity 0.15s;
+    }
+
+    .coverage-link:hover {
+      opacity: 0.8;
     }
 
     /* ===== FOOTER ===== */
@@ -1038,61 +1303,197 @@
 
     /* ===== RESPONSIVE ===== */
     @media (max-width: 600px) {
-      .hero-title {
-        font-size: 1.6rem;
-      }
-
-      .hero-subtitle {
-        font-size: 0.9rem;
-      }
-
-      .country-card {
-        padding: 1.5rem;
-      }
-
-      .country-card .country-name {
-        font-size: 1.35rem;
-      }
-
-      .country-card .flag-img {
-        max-width: 160px;
-      }
-
-      .site-header {
-        padding: 1rem;
-      }
-
-      .header-title {
-        font-size: 1rem;
-      }
-
-      .stats-badge {
-        display: none;
-      }
-
-      .site-footer {
-        flex-direction: column;
-        text-align: center;
-        gap: 0.4rem;
-      }
-    }
-
-    @media (max-width: 375px) {
       .main-content {
         padding: 1.25rem 0.75rem;
       }
 
       .hero-title {
-        font-size: 1.4rem;
+        font-size: 1.5rem;
+        margin-bottom: 0.2rem;
+      }
+
+      .hero-subtitle {
+        font-size: 0.82rem;
+        margin-bottom: 1.25rem;
+      }
+
+      .explore-btn {
+        font-size: 0.95rem;
+        padding: 0.8rem;
+        margin-bottom: 1rem;
+      }
+
+      .filter-group select {
+        font-size: 0.82rem;
+        padding: 0.55rem 0.75rem;
       }
 
       .country-card {
-        padding: 1.25rem;
+        padding: 1.1rem;
       }
 
       .country-card .country-name {
         font-size: 1.2rem;
       }
+
+      .country-card .flag-img {
+        max-width: 130px;
+        margin-bottom: 0.75rem;
+      }
+
+      .country-card .capital {
+        font-size: 0.82rem;
+      }
+
+      .country-card .population {
+        font-size: 0.8rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .site-header {
+        padding: 0.5rem 0.6rem;
+        position: relative;
+      }
+
+      .header-brand { gap: 0.4rem; }
+      .header-logo { width: 1.6rem; height: 1.6rem; }
+
+      .header-title {
+        font-size: 0.9rem;
+      }
+
+      .header-nav {
+        display: none;
+      }
+
+      .hamburger-btn {
+        display: flex;
+      }
+
+      .header-actions {
+        display: none;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        left: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        padding: 1rem;
+        background: rgba(15, 23, 42, 0.92);
+        backdrop-filter: blur(24px) saturate(1.5);
+        -webkit-backdrop-filter: blur(24px) saturate(1.5);
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        z-index: 99;
+      }
+      [data-theme="light"] .header-actions {
+        background: rgba(255, 255, 255, 0.88);
+        border-top-color: rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      }
+      .header-actions.mobile-open {
+        display: flex;
+      }
+      .mobile-nav-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        background: rgba(108, 99, 255, 0.15);
+        border: 1px solid rgba(108, 99, 255, 0.25);
+        color: var(--text);
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+
+      .stats-badge {
+        font-size: 0.8rem;
+        padding: 0.35rem 0.75rem;
+        text-align: center;
+      }
+
+      .theme-toggle { width: 48px; height: 26px; align-self: center; }
+      .theme-toggle-knob { width: 20px; height: 20px; }
+      [data-theme="light"] .theme-toggle-knob { transform: translateX(22px); }
+
+      .container {
+        max-width: 100%;
+      }
+
+      .info-grid { gap: 0.5rem; }
+      .info-item { padding: 0.55rem; }
+      .info-label { font-size: 0.68rem; }
+      .info-value { font-size: 0.82rem; }
+
+      .badges { gap: 0.3rem; margin-bottom: 0.5rem; }
+      .badge { font-size: 0.68rem; padding: 0.2rem 0.6rem; }
+
+      .country-images-grid { max-height: 260px; gap: 0.3rem; }
+      .country-images-grid img { border-radius: 5px; }
+      .country-images-refresh { font-size: 0.68rem; padding: 0.2rem 0.5rem; }
+      .country-images-title { font-size: 0.78rem; }
+
+      .map-container iframe { height: 160px; }
+
+      .fun-fact-block, .dish-block {
+        padding: 0.7rem 0.8rem;
+        font-size: 0.82rem;
+      }
+      .fun-fact-block strong, .dish-block strong { font-size: 0.78rem; }
+
+      .mark-visited-btn {
+        padding: 0.55rem 1rem;
+        font-size: 0.82rem;
+      }
+
+      /* Lightbox mobile */
+      .img-lightbox img { max-width: 95vw; max-height: 80vh; border-radius: 6px; }
+      .img-lightbox-nav { width: 36px; height: 36px; font-size: 1.4rem; }
+      .img-lightbox-prev { left: 6px; }
+      .img-lightbox-next { right: 6px; }
+      .img-lightbox-close { top: 10px; right: 12px; font-size: 1.6rem; }
+      .img-lightbox-counter { bottom: 12px; font-size: 0.75rem; }
+
+      .site-footer {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.4rem;
+        padding: 0.75rem;
+        font-size: 0.7rem;
+      }
+    }
+
+    /* ===== Small phones ===== */
+    @media (max-width: 375px) {
+      .main-content {
+        padding: 1rem 0.5rem;
+      }
+
+      .hero-title {
+        font-size: 1.3rem;
+      }
+
+      .hero-subtitle { font-size: 0.75rem; }
+
+      .explore-btn { font-size: 0.88rem; padding: 0.7rem; }
+
+      .country-card {
+        padding: 0.9rem;
+      }
+
+      .country-card .country-name {
+        font-size: 1.05rem;
+      }
+
+      .country-card .flag-img { max-width: 100px; }
+
+      .info-grid { grid-template-columns: 1fr; gap: 0.4rem; }
+
+      .header-title { font-size: 0.82rem; }
     }
   </style>
 </head>
@@ -1280,7 +1681,18 @@
       </span>
       <div class="header-title">TerraExplorer</div>
     </div>
+    <a class="header-nav" href="map.html">
+      <span class="header-nav-icon">
+        <lottie-player src="map-anim.json" background="transparent" speed="1" loop autoplay></lottie-player>
+      </span>
+      <span class="header-nav-text">Explore the world your way</span>
+    </a>
+    <button class="hamburger-btn" id="hamburgerBtn" title="Menu">
+      <span></span><span></span><span></span>
+    </button>
     <div class="header-actions">
+      <a class="mobile-nav-link" href="map.html">&#127758; Explore the world your way</a>
+      <span class="stats-badge" id="flaggedBadge">0 covered</span>
       <span class="stats-badge" id="statsBadge">0 visited</span>
       <div class="theme-toggle" id="themeToggle" title="Toggle Day/Night">
         <div class="theme-toggle-knob"></div>
@@ -1330,6 +1742,13 @@
             <div class="info-value" id="languagesText">--</div>
           </div>
         </div>
+        <div class="country-images" id="countryImages">
+          <div class="country-images-header">
+            <div class="country-images-title">Snapshots</div>
+            <button class="country-images-refresh" id="refreshImagesBtn" title="Load new images">&#8635; New photos</button>
+          </div>
+          <div class="country-images-grid" id="countryImagesGrid"><span style="grid-column:1/-1;text-align:center;opacity:0.5;font-size:0.8rem">Select a country to see photos</span></div>
+        </div>
         <div class="map-container">
           <iframe id="mapFrame" src="" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
         </div>
@@ -1372,6 +1791,17 @@
           <ul id="visitedUl"></ul>
           <div class="visited-empty" id="visitedEmpty">No countries visited yet.</div>
         </div>
+      </div>
+
+      <!-- Countries Covered Section -->
+      <div class="coverage-section" id="coverageSection">
+        <div class="coverage-title">🏳️ Flag Coverage</div>
+        <div class="coverage-number" id="coverageNumber">0</div>
+        <div class="coverage-label" id="coverageLabel">countries flagged on the map</div>
+        <div class="coverage-bar-wrap">
+          <div class="coverage-bar" id="coverageBar" style="width: 0%"></div>
+        </div>
+        <a class="coverage-link" href="map.html">Open Discover Mode to flag more →</a>
       </div>
     </div>
   </main>
@@ -1441,8 +1871,25 @@
       const visitedCount = document.getElementById('visitedCount');
       const chevron = document.getElementById('chevron');
       const themeToggle = document.getElementById('themeToggle');
+      const hamburgerBtn = document.getElementById('hamburgerBtn');
+      const headerActions = document.querySelector('.header-actions');
+
+      // Hamburger menu toggle
+      hamburgerBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        headerActions.classList.toggle('mobile-open');
+        hamburgerBtn.classList.toggle('open');
+      });
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.header-actions') && !e.target.closest('.hamburger-btn')) {
+          headerActions.classList.remove('mobile-open');
+          hamburgerBtn.classList.remove('open');
+        }
+      });
+
       const themeKnob = themeToggle.querySelector('.theme-toggle-knob');
       const statsBadge = document.getElementById('statsBadge');
+      const flaggedBadge = document.getElementById('flaggedBadge');
       const currencyText = document.getElementById('currencyText');
       const languagesText = document.getElementById('languagesText');
       const mapFrame = document.getElementById('mapFrame');
@@ -1660,6 +2107,20 @@
         const list = getVisited();
         visitedCount.textContent = '(' + list.length + ')';
         statsBadge.textContent = list.length + ' visited';
+
+        // Show flagged countries count from map page
+        var flaggedCount = parseInt(localStorage.getItem('flagged_countries_count') || '0', 10);
+        flaggedBadge.textContent = flaggedCount + ' countries covered';
+
+        // Update coverage section
+        var totalCountries = 195; // UN member states
+        document.getElementById('coverageNumber').textContent = flaggedCount;
+        var pct = totalCountries > 0 ? Math.round((flaggedCount / totalCountries) * 100) : 0;
+        document.getElementById('coverageBar').style.width = pct + '%';
+        document.getElementById('coverageLabel').textContent =
+          flaggedCount === 0 ? 'countries flagged on the map'
+          : 'out of ~' + totalCountries + ' countries (' + pct + '%)';
+
         visitedUl.innerHTML = '';
         if (list.length === 0) {
           visitedEmpty.style.display = '';
@@ -1714,10 +2175,12 @@
           }
           markVisitedBtn.textContent = 'Already Visited';
           markVisitedBtn.classList.add('already-visited');
+          countryCard.classList.add('visited-glow');
         } else {
           if (existingBadge) existingBadge.remove();
           markVisitedBtn.textContent = 'Mark as Visited';
           markVisitedBtn.classList.remove('already-visited');
+          countryCard.classList.remove('visited-glow');
         }
       }
 
@@ -1739,18 +2202,177 @@
       }
 
       // --- RestCountries API ---
+      const API_FIELDS = 'fields=name,flags,population,region,subregion,capital,currencies,languages,latlng,ccn3,cca3';
       async function fetchAllCountries() {
         if (countriesCache) return countriesCache;
-        const resp = await fetch('https://restcountries.com/v3.1/all?fields=name,flags,population,region,subregion,capital,currencies,languages,latlng');
-        if (!resp.ok) throw new Error('Could not load country data. Try again.');
-        const data = await resp.json();
-        countriesCache = data;
-        return data;
+        // Try /all first
+        try {
+          const resp = await fetch('https://restcountries.com/v3.1/all?' + API_FIELDS);
+          if (resp.ok) {
+            const data = await resp.json();
+            countriesCache = data;
+            return data;
+          }
+        } catch (e) { /* fall through to region fallback */ }
+        // Fallback: fetch all regions in parallel
+        const regions = ['africa', 'americas', 'asia', 'europe', 'oceania', 'antarctic'];
+        const promises = regions.map(r =>
+          fetch('https://restcountries.com/v3.1/region/' + r + '?' + API_FIELDS)
+            .then(res => res.ok ? res.json() : [])
+            .catch(() => [])
+        );
+        const results = await Promise.all(promises);
+        const all = results.flat();
+        if (all.length === 0) throw new Error('Could not load country data. Try again.');
+        countriesCache = all;
+        return all;
       }
 
       function getRandomCountry(countries) {
         return countries[Math.floor(Math.random() * countries.length)];
       }
+
+      // --- Lightbox ---
+      var lightbox = document.createElement('div');
+      lightbox.className = 'img-lightbox';
+      lightbox.innerHTML = '<button class="img-lightbox-close" title="Close">&times;</button>' +
+        '<button class="img-lightbox-nav img-lightbox-prev" title="Previous">&#8249;</button>' +
+        '<img src="" alt="">' +
+        '<button class="img-lightbox-nav img-lightbox-next" title="Next">&#8250;</button>' +
+        '<div class="img-lightbox-counter"></div>';
+      document.body.appendChild(lightbox);
+      var lightboxImg = lightbox.querySelector('img');
+      var lightboxCounter = lightbox.querySelector('.img-lightbox-counter');
+      var lightboxGallery = [];
+      var lightboxIdx = 0;
+
+      function closeLightbox() { lightbox.classList.remove('open'); }
+      function showLightboxImage(idx) {
+        if (idx < 0 || idx >= lightboxGallery.length) return;
+        lightboxIdx = idx;
+        lightboxImg.classList.add('loading');
+        var highRes = lightboxGallery[idx].replace(/\/\d+px-/, '/1200px-');
+        var temp = new Image();
+        temp.onload = function () {
+          lightboxImg.src = highRes;
+          lightboxImg.classList.remove('loading');
+        };
+        temp.onerror = function () {
+          lightboxImg.src = lightboxGallery[idx];
+          lightboxImg.classList.remove('loading');
+        };
+        temp.src = highRes;
+        lightboxImg.src = highRes;
+        lightboxImg.alt = 'Photo ' + (idx + 1);
+        lightboxCounter.textContent = (idx + 1) + ' / ' + lightboxGallery.length;
+      }
+
+      lightbox.querySelector('.img-lightbox-close').addEventListener('click', closeLightbox);
+      lightbox.querySelector('.img-lightbox-prev').addEventListener('click', function (e) {
+        e.stopPropagation();
+        showLightboxImage((lightboxIdx - 1 + lightboxGallery.length) % lightboxGallery.length);
+      });
+      lightbox.querySelector('.img-lightbox-next').addEventListener('click', function (e) {
+        e.stopPropagation();
+        showLightboxImage((lightboxIdx + 1) % lightboxGallery.length);
+      });
+      lightbox.addEventListener('click', function (e) {
+        if (e.target === lightbox) closeLightbox();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (!lightbox.classList.contains('open')) return;
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowLeft') showLightboxImage((lightboxIdx - 1 + lightboxGallery.length) % lightboxGallery.length);
+        if (e.key === 'ArrowRight') showLightboxImage((lightboxIdx + 1) % lightboxGallery.length);
+      });
+
+      function openLightbox(srcs, startIdx) {
+        lightboxGallery = srcs;
+        lightbox.classList.add('open');
+        showLightboxImage(startIdx || 0);
+        srcs.forEach(function (s) { var i = new Image(); i.src = s.replace(/\/\d+px-/, '/1200px-'); });
+      }
+
+      // --- Country Images ---
+      var _allCountryPhotos = [];
+      var _currentImgCountry = '';
+
+      function showPhotosInGrid(photos, countryName) {
+        var grid = document.getElementById('countryImagesGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        photos.forEach(function (photo, idx) {
+          var img = document.createElement('img');
+          img.alt = photo.alt || countryName;
+          img.loading = 'lazy';
+          img.src = photo.small;
+          img.onerror = function () { this.style.display = 'none'; };
+          img.onclick = function () {
+            openLightbox(photos.map(function (p) { return p.regular; }), idx);
+          };
+          grid.appendChild(img);
+        });
+      }
+
+      function loadCountryImages(countryName) {
+        var grid = document.getElementById('countryImagesGrid');
+        if (!grid) return;
+        if (!UNSPLASH_ACCESS_KEY) {
+          grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.5;font-size:0.8rem">Add your Unsplash key in config.js</span>';
+          return;
+        }
+        _currentImgCountry = countryName;
+        grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.5;font-size:0.8rem">Loading photos...</span>';
+
+        var url = 'https://api.unsplash.com/search/photos?query=' +
+          encodeURIComponent(countryName + ' landmarks tourism') +
+          '&per_page=20&orientation=landscape&client_id=' + UNSPLASH_ACCESS_KEY;
+
+        fetch(url)
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+          .then(function (data) {
+            var results = data.results || [];
+            if (results.length === 0) {
+              grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.4;font-size:0.8rem">No photos found</span>';
+              _allCountryPhotos = [];
+              return;
+            }
+            _allCountryPhotos = results.map(function (r) {
+              return {
+                small: r.urls.small,
+                regular: r.urls.regular,
+                alt: r.alt_description || countryName
+              };
+            });
+            showPhotosInGrid(_allCountryPhotos, countryName);
+          })
+          .catch(function (err) {
+            grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.4;font-size:0.8rem">Could not load photos</span>';
+          });
+      }
+
+      document.getElementById('refreshImagesBtn').addEventListener('click', function () {
+        if (_currentImgCountry && UNSPLASH_ACCESS_KEY) {
+          var page = Math.floor(Math.random() * 5) + 1;
+          var grid = document.getElementById('countryImagesGrid');
+          grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.5;font-size:0.8rem">Loading photos...</span>';
+          var url = 'https://api.unsplash.com/search/photos?query=' +
+            encodeURIComponent(_currentImgCountry + ' landmarks tourism') +
+            '&per_page=20&orientation=landscape&page=' + page +
+            '&client_id=' + UNSPLASH_ACCESS_KEY;
+          fetch(url)
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+            .then(function (data) {
+              var results = data.results || [];
+              if (results.length === 0) { return; }
+              _allCountryPhotos = results.map(function (r) {
+                return { small: r.urls.small, regular: r.urls.regular, alt: r.alt_description || _currentImgCountry };
+              });
+              showPhotosInGrid(_allCountryPhotos, _currentImgCountry);
+            })
+            .catch(function () {});
+        }
+      });
 
       // --- Render Card ---
       function renderCard(country) {
@@ -1804,6 +2426,9 @@
         dishText.textContent = '';
         updateVisitedBadge();
 
+        // Country images
+        loadCountryImages(country.name.common);
+
         countryCard.classList.remove('visible');
         void countryCard.offsetWidth;
         countryCard.classList.add('visible');
@@ -1813,10 +2438,17 @@
       async function fetchAIContent(countryNameStr) {
         if (!apiKey) return null;
 
+        // Check cache first
+        var cacheKey = 'ai_cache_' + countryNameStr.toLowerCase().replace(/\s+/g, '_');
+        try {
+          var cached = localStorage.getItem(cacheKey);
+          if (cached) return JSON.parse(cached);
+        } catch (_) {}
+
         aiLoading.style.display = '';
         aiContent.style.display = 'none';
 
-        const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=' + apiKey;
+        const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemma-3-1b-it:generateContent?key=' + apiKey;
 
         const body = {
           contents: [
@@ -1878,6 +2510,8 @@
         if (!jsonMatch) throw new Error('parse');
 
         const parsed = JSON.parse(jsonMatch[0]);
+        // Cache the result
+        try { localStorage.setItem(cacheKey, JSON.stringify(parsed)); } catch (_) {}
         return parsed;
       }
 

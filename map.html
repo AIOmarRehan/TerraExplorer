@@ -1,0 +1,2044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TerraExplorer — Discover Mode</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='80'>🌍</text></svg>" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@2.0.8/dist/lottie-player.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/topojson-client@3"></script>
+  <style>
+    /* ===== THEME VARIABLES (shared with index.html) ===== */
+    :root {
+      --primary: #6C63FF;
+      --primary-hover: #5a52e0;
+      --primary-glow: rgba(108, 99, 255, 0.4);
+      --card-bg: rgba(255, 255, 255, 0.92);
+      --card-border: rgba(255, 255, 255, 0.3);
+      --text: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.85);
+      --text-on-card: #ffffff;
+      --text-muted-card: rgba(255, 255, 255, 0.8);
+      --border: rgba(255, 255, 255, 0.15);
+      --success: #22c55e;
+      --error: #ef4444;
+      --highlight-bg: rgba(108, 99, 255, 0.2);
+      --visited-bg: rgba(34, 197, 94, 0.2);
+      --radius: 16px;
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      --glass-blur: blur(16px);
+      --map-bg: #0e1a2e;
+      --map-land: rgba(108, 99, 255, 0.25);
+      --map-land-border: rgba(255, 255, 255, 0.35);
+      --map-land-hover: rgba(108, 99, 255, 0.45);
+    }
+
+    [data-theme="light"] {
+      --card-bg: rgba(255, 255, 255, 0.85);
+      --card-border: rgba(255, 255, 255, 0.5);
+      --text: #1e293b;
+      --text-muted: rgba(30, 41, 59, 0.6);
+      --text-on-card: #1e293b;
+      --text-muted-card: #475569;
+      --border: rgba(0, 0, 0, 0.08);
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      --map-bg: #e8f0fe;
+      --map-land: rgba(108, 99, 255, 0.15);
+      --map-land-border: rgba(30, 41, 59, 0.3);
+      --map-land-hover: rgba(108, 99, 255, 0.35);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif;
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: var(--map-bg);
+      transition: background 0.4s;
+    }
+
+    /* ===== HEADER ===== */
+    .site-header {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.7rem 1.25rem;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-bottom: 1px solid var(--border);
+      z-index: 1000;
+      flex-shrink: 0;
+    }
+
+    [data-theme="light"] .site-header {
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .header-logo {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .header-logo lottie-player {
+      width: 100%;
+      height: 100%;
+    }
+
+    .header-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    /* Back link */
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      transition: background 0.3s, border-color 0.3s, transform 0.2s;
+      text-decoration: none;
+      color: var(--text);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .header-nav:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.25);
+      transform: scale(1.03);
+    }
+    [data-theme="light"] .header-nav {
+      background: rgba(255, 255, 255, 0.35);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+    [data-theme="light"] .header-nav:hover {
+      background: rgba(255, 255, 255, 0.55);
+    }
+    .header-nav-icon {
+      width: 1.4rem; height: 1.4rem;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .header-nav-icon lottie-player { width: 100%; height: 100%; }
+
+    /* Theme Toggle */
+    .theme-toggle {
+      position: relative;
+      width: 52px;
+      height: 28px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.3s;
+      display: flex;
+      align-items: center;
+      padding: 0 3px;
+    }
+
+    .theme-toggle:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .theme-toggle-knob {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #cbd5e1;
+      transition: transform 0.3s ease, background 0.3s;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    [data-theme="light"] .theme-toggle-knob {
+      transform: translateX(24px);
+      background: #fbbf24;
+    }
+
+    .stats-badge {
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid var(--border);
+      backdrop-filter: var(--glass-blur);
+    }
+
+    [data-theme="light"] .stats-badge {
+      background: rgba(255, 255, 255, 0.4);
+    }
+
+    .flag-counter {
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: rgba(108, 99, 255, 0.25);
+      border: 1px solid rgba(108, 99, 255, 0.35);
+      backdrop-filter: var(--glass-blur);
+      white-space: nowrap;
+    }
+    [data-theme="light"] .flag-counter {
+      background: rgba(108, 99, 255, 0.15);
+      border-color: rgba(108, 99, 255, 0.25);
+    }
+
+    .header-btn {
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s, border-color 0.2s;
+      white-space: nowrap;
+    }
+    .header-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: scale(1.04);
+    }
+    .header-btn.cover-all {
+      background: rgba(108, 99, 255, 0.3);
+      border-color: rgba(108, 99, 255, 0.5);
+    }
+    .header-btn.cover-all:hover {
+      background: rgba(108, 99, 255, 0.45);
+    }
+    .header-btn.clear-all {
+      background: rgba(255, 80, 80, 0.2);
+      border-color: rgba(255, 80, 80, 0.35);
+    }
+    .header-btn.clear-all:hover {
+      background: rgba(255, 80, 80, 0.35);
+    }
+    [data-theme="light"] .header-btn {
+      background: rgba(255, 255, 255, 0.4);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+    [data-theme="light"] .header-btn:hover {
+      background: rgba(255, 255, 255, 0.6);
+    }
+    [data-theme="light"] .header-btn.cover-all {
+      background: rgba(108, 99, 255, 0.15);
+      border-color: rgba(108, 99, 255, 0.3);
+    }
+    [data-theme="light"] .header-btn.clear-all {
+      background: rgba(255, 80, 80, 0.12);
+      border-color: rgba(255, 80, 80, 0.25);
+    }
+
+    /* ===== MAP ===== */
+    #map {
+      flex: 1;
+      z-index: 1;
+    }
+
+    /* Reduce SVG rendering artifacts at country seams */
+    .leaflet-zoom-animated path {
+      shape-rendering: geometricPrecision;
+    }
+
+    /* Hide tooltips when detail panel is open */
+    body.panel-open .leaflet-tooltip {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    /* Remove Leaflet default backgrounds */
+    .leaflet-container {
+      background: var(--map-bg) !important;
+    }
+
+    /* Country name tooltip */
+    .country-tooltip {
+      background: rgba(15, 23, 42, 0.85);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 0.35rem 0.7rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      white-space: nowrap;
+    }
+    .country-tooltip::before { display: none; }
+
+    [data-theme="light"] .country-tooltip {
+      background: rgba(255, 255, 255, 0.9);
+      color: #1e293b;
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    /* ===== DETAIL PANEL ===== */
+    .detail-overlay {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 380px;
+      max-width: 90vw;
+      height: 100vh;
+      z-index: 2000;
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      pointer-events: none;
+    }
+
+    .detail-overlay.open {
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
+    .detail-panel {
+      flex: 1;
+      overflow-y: auto;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-left: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 1.5rem;
+      color: var(--text-on-card);
+    }
+
+    [data-theme="light"] .detail-panel {
+      background: rgba(255, 255, 255, 0.88);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    .detail-panel.visited-glow {
+      border-left-color: var(--success);
+      box-shadow: inset 3px 0 12px rgba(34, 197, 94, 0.2);
+    }
+
+    .detail-close {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      color: var(--text-on-card);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+      z-index: 10;
+    }
+
+    .detail-close:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    [data-theme="light"] .detail-close {
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    .detail-flag {
+      width: 100%;
+      max-width: 200px;
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      margin: 0 auto 1.25rem;
+      display: block;
+    }
+
+    .detail-name {
+      font-size: 1.5rem;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 0.2rem;
+    }
+
+    .detail-capital {
+      text-align: center;
+      color: var(--text-muted-card);
+      font-size: 1rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .badges {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.85rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.3rem 0.8rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: var(--highlight-bg);
+      color: #e0e7ff;
+    }
+
+    [data-theme="light"] .badge {
+      color: var(--primary);
+    }
+
+    .badge.visited-badge {
+      background: var(--visited-bg);
+      color: #bbf7d0;
+    }
+
+    [data-theme="light"] .badge.visited-badge {
+      color: var(--success);
+    }
+
+    .detail-population {
+      font-size: 0.95rem;
+      color: var(--text-muted-card);
+      margin-bottom: 1.25rem;
+      text-align: center;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      text-align: left;
+    }
+
+    .info-item {
+      padding: 0.75rem;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      font-size: 0.88rem;
+    }
+
+    [data-theme="light"] .info-item {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .info-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted-card);
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .info-value {
+      color: var(--text-on-card);
+      font-weight: 500;
+      word-break: break-word;
+    }
+
+    .map-embed {
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    [data-theme="light"] .map-embed {
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .map-embed iframe {
+      width: 100%;
+      height: 200px;
+      border: none;
+      display: block;
+    }
+
+    .ai-section .ai-loading {
+      text-align: center;
+      color: var(--text-muted-card);
+      font-size: 0.9rem;
+      padding: 1rem 0;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 0.5rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .ai-section .ai-loading .spinner {
+      border-color: rgba(108, 99, 255, 0.2);
+      border-top-color: var(--primary);
+    }
+
+    .fun-fact-block {
+      background: rgba(108, 99, 255, 0.2);
+      border-left: 4px solid var(--primary);
+      border-radius: 0 10px 10px 0;
+      padding: 1rem 1.1rem;
+      margin-bottom: 0.85rem;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--text-on-card);
+    }
+
+    .fun-fact-block strong {
+      display: block;
+      margin-bottom: 0.3rem;
+      color: #c7d2fe;
+      font-size: 0.85rem;
+    }
+
+    [data-theme="light"] .fun-fact-block strong {
+      color: var(--primary);
+    }
+
+    .dish-block {
+      background: rgba(249, 115, 22, 0.2);
+      border-left: 4px solid #f97316;
+      border-radius: 0 10px 10px 0;
+      padding: 1rem 1.1rem;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--text-on-card);
+    }
+
+    .dish-block strong {
+      display: block;
+      margin-bottom: 0.3rem;
+      color: #fed7aa;
+      font-size: 0.85rem;
+    }
+
+    [data-theme="light"] .dish-block strong {
+      color: #f97316;
+    }
+
+    .country-images { margin-bottom: 1rem; }
+    .country-images-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--text-on-card);
+    }
+    .country-images-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.4rem;
+      border-radius: 10px;
+      overflow: hidden;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+    .country-images-grid img {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.06);
+      transition: transform 0.2s;
+      cursor: pointer;
+    }
+    .country-images-grid img:hover { transform: scale(1.04); }
+    [data-theme="light"] .country-images-grid img {
+      background: rgba(0,0,0,0.05);
+    }
+
+    /* Lightbox */
+    .img-lightbox {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.92); display: flex; align-items: center;
+      justify-content: center; z-index: 100000;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
+    .img-lightbox.open { opacity: 1; pointer-events: auto; }
+    .img-lightbox img {
+      max-width: 82vw; max-height: 88vh; border-radius: 10px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6); object-fit: contain;
+      transition: opacity 0.2s;
+    }
+    .img-lightbox img.loading { opacity: 0.3; }
+    .img-lightbox-close {
+      position: absolute; top: 18px; right: 24px; font-size: 2rem;
+      color: #fff; background: none; border: none; cursor: pointer;
+      opacity: 0.7; transition: opacity 0.2s; z-index: 2;
+    }
+    .img-lightbox-close:hover { opacity: 1; }
+    .img-lightbox-nav {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      background: rgba(255,255,255,0.15); border: none; color: #fff;
+      font-size: 2rem; width: 48px; height: 48px; border-radius: 50%;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      opacity: 0.7; transition: opacity 0.2s, background 0.2s; z-index: 2;
+    }
+    .img-lightbox-nav:hover { opacity: 1; background: rgba(255,255,255,0.3); }
+    .img-lightbox-prev { left: 16px; }
+    .img-lightbox-next { right: 16px; }
+    .img-lightbox-counter {
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,0.6); font-size: 0.85rem;
+    }
+    .country-images-refresh {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      background: none; border: 1px solid rgba(255,255,255,0.15);
+      color: var(--text-on-card); font-size: 0.75rem; padding: 0.25rem 0.6rem;
+      border-radius: 6px; cursor: pointer; opacity: 0.7; transition: opacity 0.2s;
+      margin-left: auto;
+    }
+    .country-images-refresh:hover { opacity: 1; }
+    [data-theme="light"] .country-images-refresh { border-color: rgba(0,0,0,0.15); }
+    .country-images-header {
+      display: flex; align-items: center; margin-bottom: 0.5rem;
+    }
+    .country-images-header .country-images-title { margin-bottom: 0; }
+
+    .mark-visited-btn {
+      margin-top: 1.5rem;
+      width: 100%;
+      padding: 0.65rem 1.75rem;
+      border: none;
+      border-radius: 10px;
+      background: var(--success);
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mark-visited-btn:hover {
+      background: #16a34a;
+      box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
+    }
+
+    .mark-visited-btn.already-visited {
+      background: rgba(34, 197, 94, 0.4);
+      color: #fff;
+      cursor: default;
+    }
+
+    /* Leaflet zoom control styling */
+    .leaflet-control-zoom a {
+      background: rgba(15, 23, 42, 0.7) !important;
+      color: #fff !important;
+      border-color: rgba(255, 255, 255, 0.15) !important;
+      backdrop-filter: blur(8px);
+    }
+
+    .leaflet-control-zoom a:hover {
+      background: rgba(15, 23, 42, 0.9) !important;
+    }
+
+    [data-theme="light"] .leaflet-control-zoom a {
+      background: rgba(255, 255, 255, 0.8) !important;
+      color: #1e293b !important;
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Hide Leaflet attribution for cleaner look */
+    .leaflet-control-attribution {
+      background: rgba(15, 23, 42, 0.5) !important;
+      color: rgba(255, 255, 255, 0.5) !important;
+      font-size: 0.65rem !important;
+      backdrop-filter: blur(4px);
+    }
+
+    .leaflet-control-attribution a {
+      color: rgba(255, 255, 255, 0.6) !important;
+    }
+
+    [data-theme="light"] .leaflet-control-attribution {
+      background: rgba(255, 255, 255, 0.6) !important;
+      color: rgba(0, 0, 0, 0.4) !important;
+    }
+
+    [data-theme="light"] .leaflet-control-attribution a {
+      color: rgba(0, 0, 0, 0.5) !important;
+    }
+
+    /* ===== Hamburger menu ===== */
+    .hamburger-btn {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.35rem;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 100;
+    }
+    .hamburger-btn span {
+      display: block;
+      width: 22px;
+      height: 2.5px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: all 0.3s ease;
+      transform-origin: center;
+    }
+    .hamburger-btn.open span:nth-child(1) {
+      transform: translateY(6.5px) rotate(45deg);
+    }
+    .hamburger-btn.open span:nth-child(2) {
+      opacity: 0;
+    }
+    .hamburger-btn.open span:nth-child(3) {
+      transform: translateY(-6.5px) rotate(-45deg);
+    }
+
+    .mobile-nav-link {
+      display: none;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 600px) {
+      /* --- Header mobile --- */
+      .site-header {
+        padding: 0.45rem 0.6rem;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+      }
+      .header-brand { gap: 0.4rem; }
+      .header-logo { width: 26px; height: 26px; }
+      .header-title { font-size: 0.9rem; }
+      .header-nav {
+        display: none;
+      }
+      /* Hamburger visible on mobile */
+      .hamburger-btn {
+        display: flex;
+      }
+      .header-actions {
+        display: none;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        left: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        padding: 1rem;
+        background: rgba(15, 23, 42, 0.92);
+        backdrop-filter: blur(24px) saturate(1.5);
+        -webkit-backdrop-filter: blur(24px) saturate(1.5);
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        z-index: 99;
+      }
+      [data-theme="light"] .header-actions {
+        background: rgba(255, 255, 255, 0.88);
+        border-top-color: rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      }
+      .header-actions.mobile-open {
+        display: flex;
+      }
+      .mobile-nav-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        background: rgba(108, 99, 255, 0.15);
+        border: 1px solid rgba(108, 99, 255, 0.25);
+        color: var(--text);
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+      .flag-counter {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.75rem;
+        text-align: center;
+      }
+      .header-btn {
+        font-size: 0.85rem;
+        padding: 0.5rem 1rem;
+        width: 100%;
+        text-align: center;
+        border-radius: 8px;
+      }
+      .stats-badge {
+        font-size: 0.8rem;
+        padding: 0.35rem 0.75rem;
+        text-align: center;
+      }
+      .theme-toggle {
+        width: 48px;
+        height: 26px;
+        align-self: center;
+      }
+      .theme-toggle-knob { width: 20px; height: 20px; }
+      [data-theme="light"] .theme-toggle-knob { transform: translateX(22px); }
+
+      /* --- Detail panel mobile: full-screen bottom sheet --- */
+      .detail-overlay {
+        width: 100vw;
+        max-width: 100vw;
+        height: 85vh;
+        top: auto;
+        bottom: 0;
+        right: 0;
+        transform: translateY(100%);
+        border-radius: 20px 20px 0 0;
+        overflow: hidden;
+      }
+      .detail-overlay.open {
+        transform: translateY(0);
+      }
+      .detail-panel {
+        padding: 0.75rem 1rem 1.25rem;
+        border-left: none;
+        border-radius: 20px 20px 0 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      [data-theme="light"] .detail-panel {
+        border-top-color: rgba(0, 0, 0, 0.08);
+      }
+      /* Drag handle indicator */
+      .detail-panel::before {
+        content: '';
+        display: block;
+        width: 36px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.25);
+        border-radius: 2px;
+        margin: 0 auto 0.6rem;
+      }
+      [data-theme="light"] .detail-panel::before {
+        background: rgba(0, 0, 0, 0.15);
+      }
+      .detail-panel.visited-glow {
+        border-left: none;
+        box-shadow: inset 0 3px 12px rgba(34, 197, 94, 0.2);
+      }
+      .detail-close {
+        top: 0.5rem;
+        right: 0.6rem;
+        width: 28px;
+        height: 28px;
+        font-size: 0.95rem;
+      }
+      .detail-flag {
+        max-width: 120px;
+        margin-bottom: 0.75rem;
+        border-radius: 8px;
+      }
+      .detail-name { font-size: 1.2rem; margin-bottom: 0.1rem; }
+      .detail-capital { font-size: 0.85rem; margin-bottom: 0.5rem; }
+      .badges { gap: 0.35rem; margin-bottom: 0.5rem; }
+      .badge { font-size: 0.7rem; padding: 0.2rem 0.6rem; }
+      .detail-population { font-size: 0.82rem; margin-bottom: 0.75rem; }
+      .info-grid { gap: 0.5rem; margin-bottom: 0.75rem; }
+      .info-item { padding: 0.55rem; border-radius: 8px; }
+      .info-label { font-size: 0.68rem; }
+      .info-value { font-size: 0.82rem; }
+      .country-images-grid {
+        max-height: 260px;
+        gap: 0.3rem;
+      }
+      .country-images-grid img { border-radius: 5px; }
+      .map-embed iframe { height: 160px; }
+      .fun-fact-block, .dish-block {
+        padding: 0.75rem 0.85rem;
+        font-size: 0.82rem;
+      }
+      .fun-fact-block strong, .dish-block strong { font-size: 0.78rem; }
+      .mark-visited-btn {
+        margin-top: 1rem;
+        padding: 0.55rem 1rem;
+        font-size: 0.82rem;
+        border-radius: 8px;
+      }
+      .country-images-refresh { font-size: 0.68rem; padding: 0.2rem 0.5rem; }
+      .country-images-title { font-size: 0.78rem; }
+
+      /* Lightbox mobile */
+      .img-lightbox img { max-width: 95vw; max-height: 80vh; border-radius: 6px; }
+      .img-lightbox-nav { width: 36px; height: 36px; font-size: 1.4rem; }
+      .img-lightbox-prev { left: 6px; }
+      .img-lightbox-next { right: 6px; }
+      .img-lightbox-close { top: 10px; right: 12px; font-size: 1.6rem; }
+      .img-lightbox-counter { bottom: 12px; font-size: 0.75rem; }
+
+      /* Leaflet controls out of the way */
+      .leaflet-control-zoom { margin-top: 6px !important; margin-left: 6px !important; }
+      .leaflet-control-zoom a { width: 28px !important; height: 28px !important; line-height: 28px !important; font-size: 14px !important; }
+    }
+
+    /* Small phones */
+    @media (max-width: 380px) {
+      .site-header { padding: 0.35rem 0.45rem; }
+      .header-title { font-size: 0.82rem; }
+      .detail-overlay { height: 88vh; }
+      .detail-panel { padding: 0.6rem 0.75rem 1rem; }
+      .detail-flag { max-width: 90px; }
+      .detail-name { font-size: 1.05rem; }
+      .info-grid { grid-template-columns: 1fr; gap: 0.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-brand">
+      <span class="header-logo">
+        <lottie-player src="earth-anim.json" background="transparent" speed="1" loop autoplay></lottie-player>
+      </span>
+      <div class="header-title">TerraExplorer</div>
+    </div>
+    <a class="header-nav" href="index.html">
+      <span class="header-nav-icon">
+        <lottie-player src="map-anim.json" background="transparent" speed="1" loop autoplay></lottie-player>
+      </span>
+      <span>Back to Explorer</span>
+    </a>
+    <button class="hamburger-btn" id="hamburgerBtn" title="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="header-actions">
+      <a class="mobile-nav-link" href="index.html">&#127968; Back to Explorer</a>
+      <span class="flag-counter" id="flagCounter">0 / 0 flagged</span>
+      <button class="header-btn cover-all" id="coverAllBtn" title="Cover all countries with flags">&#127760; Cover All</button>
+      <button class="header-btn clear-all" id="clearAllBtn" title="Clear all flags">&#10060; Clear All</button>
+      <span class="stats-badge" id="statsBadge">0 visited</span>
+      <div class="theme-toggle" id="themeToggle" title="Toggle Day/Night">
+        <div class="theme-toggle-knob"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Map -->
+  <div id="map"></div>
+
+  <!-- Detail Panel -->
+  <div class="detail-overlay" id="detailOverlay">
+    <div class="detail-panel" id="detailPanel">
+      <button class="detail-close" id="detailClose" title="Close">&times;</button>
+      <img class="detail-flag" id="detailFlag" src="" alt="Country flag" />
+      <div class="detail-name" id="detailName"></div>
+      <div class="detail-capital" id="detailCapital"></div>
+      <div class="badges" id="detailBadges"></div>
+      <div class="detail-population" id="detailPopulation"></div>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">Currency</div>
+          <div class="info-value" id="detailCurrency">--</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Languages</div>
+          <div class="info-value" id="detailLanguages">--</div>
+        </div>
+      </div>
+      <div class="country-images" id="countryImages">
+        <div class="country-images-header">
+          <div class="country-images-title">Snapshots</div>
+          <button class="country-images-refresh" id="refreshImagesBtn" title="Load new images">&#8635; New photos</button>
+        </div>
+        <div class="country-images-grid" id="countryImagesGrid"><span style="grid-column:1/-1;text-align:center;opacity:0.5;font-size:0.8rem">Select a country to see photos</span></div>
+      </div>
+      <div class="map-embed">
+        <iframe id="detailMapFrame" src="" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+      <div class="ai-section" id="aiSection">
+        <div class="ai-loading" id="aiLoading" style="display:none;">
+          <span class="spinner"></span> Fetching AI insights...
+        </div>
+        <div id="aiContent" style="display:none;">
+          <div class="fun-fact-block" id="funFactBlock">
+            <strong>Fun Fact</strong>
+            <span id="funFactText"></span>
+          </div>
+          <div class="dish-block" id="dishBlock">
+            <strong>Traditional Dish</strong>
+            <span id="dishText"></span>
+          </div>
+        </div>
+      </div>
+      <button class="mark-visited-btn" id="markVisitedBtn" type="button">Mark as Visited</button>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      // --- Config ---
+      const apiKey = (typeof GEMINI_API_KEY !== 'undefined' && GEMINI_API_KEY !== 'YOUR_API_KEY_HERE') ? GEMINI_API_KEY : '';
+      let isDark = true;
+      let countriesCache = null;
+      let currentCountry = null;
+      let geoLayer = null;
+      let selectedLayer = null;
+
+      // --- Color palettes (direct values, no CSS variable lookups) ---
+      var colors = {
+        dark: { land: '#2a2570', landBorder: '#5c5a8a', landHover: '#4a42b0', visited: '#1a6b3c' },
+        light: { land: '#c5bfff', landBorder: '#7a7aa0', landHover: '#9a90f0', visited: '#6fcf97' }
+      };
+
+      function getColors() { return isDark ? colors.dark : colors.light; }
+
+      // --- DOM ---
+      const themeToggle = document.getElementById('themeToggle');
+      const hamburgerBtn = document.getElementById('hamburgerBtn');
+      const headerActions = document.querySelector('.header-actions');
+
+      // Hamburger menu toggle
+      hamburgerBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        headerActions.classList.toggle('mobile-open');
+        hamburgerBtn.classList.toggle('open');
+      });
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.header-actions') && !e.target.closest('.hamburger-btn')) {
+          headerActions.classList.remove('mobile-open');
+          hamburgerBtn.classList.remove('open');
+        }
+      });
+
+      const statsBadge = document.getElementById('statsBadge');
+      const detailOverlay = document.getElementById('detailOverlay');
+      const detailPanel = document.getElementById('detailPanel');
+      const detailClose = document.getElementById('detailClose');
+      const detailFlag = document.getElementById('detailFlag');
+      const detailName = document.getElementById('detailName');
+      const detailCapital = document.getElementById('detailCapital');
+      const detailBadges = document.getElementById('detailBadges');
+      const detailPopulation = document.getElementById('detailPopulation');
+      const detailCurrency = document.getElementById('detailCurrency');
+      const detailLanguages = document.getElementById('detailLanguages');
+      const detailMapFrame = document.getElementById('detailMapFrame');
+      const aiLoading = document.getElementById('aiLoading');
+      const aiContent = document.getElementById('aiContent');
+      const funFactText = document.getElementById('funFactText');
+      const dishText = document.getElementById('dishText');
+      const markVisitedBtn = document.getElementById('markVisitedBtn');
+      const flagCounter = document.getElementById('flagCounter');
+      const coverAllBtn = document.getElementById('coverAllBtn');
+      const clearAllBtn = document.getElementById('clearAllBtn');
+
+      // Track which countries are flagged (persists across page reloads)
+      var flaggedCountries = new Set();
+      (function loadFlaggedCountries() {
+        try {
+          var saved = JSON.parse(localStorage.getItem('flagged_countries_list') || '[]');
+          if (Array.isArray(saved)) saved.forEach(function (n) { flaggedCountries.add(n); });
+        } catch (e) {}
+      })();
+
+      function saveFlaggedCount() {
+        localStorage.setItem('flagged_countries_count', flaggedCountries.size.toString());
+        localStorage.setItem('flagged_countries_list', JSON.stringify(Array.from(flaggedCountries)));
+      }
+
+      // --- Theme ---
+      themeToggle.addEventListener('click', function () {
+        isDark = !isDark;
+        if (isDark) {
+          document.documentElement.removeAttribute('data-theme');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+        // Re-style all non-selected layers (skip flagged ones to preserve flags)
+        if (geoLayer) {
+          geoLayer.eachLayer(function (layer) {
+            if (layer._flagPatternId) return; // don't touch flagged layers
+            if (layer !== selectedLayer) {
+              var isVis = layer._countryData && isVisited(layer._countryData.name.common);
+              layer.setStyle(isVis ? visitedStyle() : defaultStyle());
+            }
+          });
+        }
+      });
+
+      // --- Visited helpers (shared localStorage with index.html) ---
+      function getVisited() {
+        try { return JSON.parse(localStorage.getItem('visited_countries')) || []; }
+        catch { return []; }
+      }
+
+      function saveVisited(list) {
+        localStorage.setItem('visited_countries', JSON.stringify(list));
+      }
+
+      function isVisited(name) {
+        return getVisited().includes(name);
+      }
+
+      function toggleVisited(name) {
+        const list = getVisited();
+        if (!list.includes(name)) {
+          list.push(name);
+          saveVisited(list);
+        }
+        updateStats();
+        updateVisitedBadge();
+      }
+
+      function updateStats() {
+        statsBadge.textContent = getVisited().length + ' visited';
+      }
+
+      function getTotalCountries() {
+        if (!geoLayer) return 0;
+        var seen = new Set();
+        geoLayer.eachLayer(function (l) {
+          var name = l._countryData ? l._countryData.name.common : (l._featureId || '');
+          if (name) seen.add(name);
+        });
+        return seen.size;
+      }
+
+      function updateFlagCounter() {
+        var total = getTotalCountries();
+        var covered = flaggedCountries.size;
+        var remaining = total - covered;
+        flagCounter.textContent = covered + ' / ' + total + ' flagged (' + remaining + ' left)';
+        saveFlaggedCount();
+      }
+
+      // --- Cover All Countries with Flags ---
+      coverAllBtn.addEventListener('click', function () {
+        if (!geoLayer) return;
+        var groups = {};
+        geoLayer.eachLayer(function (l) {
+          var name = l._countryData ? l._countryData.name.common : null;
+          if (!name) return;
+          if (!groups[name]) groups[name] = [];
+          groups[name].push(l);
+        });
+        Object.keys(groups).forEach(function (name) {
+          var g = groups[name];
+          var country = g[0]._countryData;
+          if (!country) return;
+          g.forEach(function (l, idx) {
+            try { applyFlagFill(l, country, idx); } catch (e) {}
+          });
+          flaggedCountries.add(name);
+        });
+        updateFlagCounter();
+      });
+
+      // --- Clear All Flags ---
+      clearAllBtn.addEventListener('click', function () {
+        if (!geoLayer) return;
+        geoLayer.eachLayer(function (l) {
+          clearFlagFill(l);
+          var isVis = l._countryData && isVisited(l._countryData.name.common);
+          l.setStyle(isVis ? visitedStyle() : defaultStyle());
+        });
+        flaggedCountries.clear();
+        selectedLayer = null;
+        updateFlagCounter();
+      });
+
+      // --- Leaflet Map ---
+      const map = L.map('map', {
+        center: [15, 0],
+        zoom: 3,
+        minZoom: 2,
+        maxZoom: 7,
+        zoomControl: true,
+        renderer: L.svg(),
+        worldCopyJump: false,
+        maxBounds: [[-90, -200], [90, 200]],
+        maxBoundsViscosity: 1.0
+      });
+
+      // No tile layer — plain colored background (cartoon style)
+
+      // --- Styles (thinner borders to minimize seam artifacts) ---
+      function defaultStyle() {
+        var c = getColors();
+        return { weight: 0.5, color: c.landBorder, fillColor: c.land, fillOpacity: 1, opacity: 0.6 };
+      }
+
+      function hoverStyle() {
+        var c = getColors();
+        return { weight: 1.5, color: 'rgba(255,255,255,0.7)', fillColor: c.landHover, fillOpacity: 1, opacity: 1 };
+      }
+
+      function visitedStyle() {
+        var c = getColors();
+        return { weight: 1.2, color: isDark ? '#2ecc71' : '#1a8a4a', fillColor: c.visited, fillOpacity: 1, opacity: 0.9 };
+      }
+
+      // --- Antimeridian fix: Fiji & Russia cross the 180° line, causing lines across the map ---
+      function fixAntimeridian(geojson) {
+        geojson.features.forEach(function (feature) {
+          var geom = feature.geometry;
+          if (geom.type === 'Polygon') {
+            geom.coordinates = geom.coordinates.map(fixRing);
+          } else if (geom.type === 'MultiPolygon') {
+            geom.coordinates = geom.coordinates.map(function (poly) {
+              return poly.map(fixRing);
+            });
+          }
+        });
+        return geojson;
+      }
+
+      function fixRing(ring) {
+        var hasHigh = false, hasLow = false;
+        for (var i = 0; i < ring.length; i++) {
+          if (ring[i][0] > 160) hasHigh = true;
+          if (ring[i][0] < -160) hasLow = true;
+        }
+        if (!(hasHigh && hasLow)) return ring;
+        // Shift negative longitudes to positive so polygon doesn't wrap
+        var shifted = ring.map(function (c) {
+          return c[0] < 0 ? [c[0] + 360, c[1]] : [c[0], c[1]];
+        });
+        // Check if the shifted ring spans too wide (e.g. Antarctica goes from 0 to 360)
+        var lons = shifted.map(function (c) { return c[0]; });
+        var span = Math.max.apply(null, lons) - Math.min.apply(null, lons);
+        if (span > 180) return ring; // Not a dateline crosser, just a wide polygon
+        return shifted;
+      }
+
+      // --- Load BOTH datasets before building the map ---
+      function loadTopoJSON(url) {
+        return fetch(url).then(function (r) {
+          if (!r.ok) throw new Error('TopoJSON fetch failed: ' + r.status);
+          return r.json();
+        });
+      }
+
+      var topoPromise = loadTopoJSON('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json')
+        .catch(function () {
+          return loadTopoJSON('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+        });
+
+      var apiPromise = fetchAllCountries().catch(function (err) {
+        console.error('RestCountries API failed:', err);
+        return [];
+      });
+
+      Promise.all([topoPromise, apiPromise]).then(function (results) {
+        var topoData = results[0];
+        var countries = results[1];
+        var geojson = topojson.feature(topoData, topoData.objects.countries);
+
+        // Fix Fiji & Russia antimeridian crossing
+        fixAntimeridian(geojson);
+
+        // Split MultiPolygons into individual Polygons so each island
+        // gets its own SVG path and its own perfectly fitted flag pattern.
+        // Exception: Antarctica (ID 010) stays as one shape to avoid 100+ fragments.
+        var splitFeatures = [];
+        geojson.features.forEach(function (feature) {
+          if (feature.geometry.type === 'MultiPolygon' && feature.id !== '010') {
+            feature.geometry.coordinates.forEach(function (polyCoords) {
+              splitFeatures.push({
+                type: 'Feature',
+                id: feature.id,
+                properties: feature.properties,
+                geometry: { type: 'Polygon', coordinates: polyCoords }
+              });
+            });
+          } else {
+            splitFeatures.push(feature);
+          }
+        });
+        geojson.features = splitFeatures;
+
+        // We'll collect layers by country key to group them after creation
+        var countryGroups = {}; // key -> [layer, layer, ...]
+
+        geoLayer = L.geoJSON(geojson, {
+          style: function (feature) {
+            var match = findCountryByNumeric(countries, feature.id);
+            if (match && isVisited(match.name.common)) return visitedStyle();
+            return defaultStyle();
+          },
+          onEachFeature: function (feature, layer) {
+            var match = findCountryByNumeric(countries, feature.id);
+            // Fallback: match by name if numeric code didn't work
+            if (!match && feature.properties && feature.properties.name) {
+              match = findCountryByName(countries, feature.properties.name);
+            }
+            // Fallback: match unrecognized territories (empty IDs) by centroid
+            if (!match && (!feature.id || feature.id === '')) {
+              match = matchUnrecognized(feature);
+            }
+            if (match) {
+              layer._countryData = match;
+            }
+            var displayName = match ? match.name.common : (feature.properties && feature.properties.name || '');
+            if (displayName) {
+              layer.bindTooltip(displayName, {
+                className: 'country-tooltip',
+                sticky: true,
+                direction: 'top',
+                offset: [0, -10]
+              });
+            }
+            layer._featureId = feature.id;
+
+            // Group key: use country name if matched, else feature id
+            var groupKey = match ? match.name.common : (feature.id || Math.random().toString());
+            if (!countryGroups[groupKey]) countryGroups[groupKey] = [];
+            countryGroups[groupKey].push(layer);
+
+            layer.on('mouseover', onMouseOver);
+            layer.on('mouseout', onMouseOut);
+            layer.on('click', onCountryClick);
+          }
+        }).addTo(map);
+
+        // Link sibling layers: each layer gets _countryGroup = array of ALL layers for that country
+        Object.keys(countryGroups).forEach(function (key) {
+          var group = countryGroups[key];
+          group.forEach(function (layer) {
+            layer._countryGroup = group;
+          });
+        });
+
+        updateStats();
+        updateFlagCounter();
+
+        // Restore previously flagged countries from localStorage
+        if (flaggedCountries.size > 0) {
+          var restoreGroups = {};
+          geoLayer.eachLayer(function (l) {
+            var name = l._countryData ? l._countryData.name.common : null;
+            if (!name || !flaggedCountries.has(name)) return;
+            if (!restoreGroups[name]) restoreGroups[name] = [];
+            restoreGroups[name].push(l);
+          });
+          Object.keys(restoreGroups).forEach(function (name) {
+            var group = restoreGroups[name];
+            var country = group[0]._countryData;
+            if (!country) return;
+            group.forEach(function (l, idx) {
+              try { applyFlagFill(l, country, idx); } catch (e) {}
+            });
+          });
+        }
+
+        // Apply green style to visited countries on initial load
+        highlightVisitedOnMap();
+      }).catch(function (err) {
+        console.error('Map loading failed:', err);
+      });
+
+      function findCountryByNumeric(countries, numericId) {
+        if (numericId == null || !countries || countries.length === 0) return null;
+        var idStr = String(numericId);
+        while (idStr.length < 3) idStr = '0' + idStr;
+        return countries.find(function (c) {
+          return c.ccn3 === idStr || c.ccn3 === String(numericId);
+        }) || null;
+      }
+
+      // Secondary match by name for countries whose numeric code didn't match
+      function findCountryByName(countries, name) {
+        if (!name || !countries || countries.length === 0) return null;
+        var lower = name.toLowerCase();
+        return countries.find(function (c) {
+          return c.name.common.toLowerCase() === lower ||
+                 (c.name.official && c.name.official.toLowerCase() === lower);
+        }) || null;
+      }
+
+      // Hardcoded data for territories not in RestCountries API
+      // These have empty IDs in the TopoJSON (world-atlas 110m)
+      var UNRECOGNIZED_TERRITORIES = [
+        {
+          name: { common: 'Northern Cyprus', official: 'Turkish Republic of Northern Cyprus' },
+          flags: { svg: 'https://upload.wikimedia.org/wikipedia/commons/1/1e/Flag_of_the_Turkish_Republic_of_Northern_Cyprus.svg', png: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Flag_of_the_Turkish_Republic_of_Northern_Cyprus.svg/320px-Flag_of_the_Turkish_Republic_of_Northern_Cyprus.svg.png' },
+          population: 326000, region: 'Europe', subregion: 'Southern Europe',
+          capital: ['North Nicosia'], currencies: { TRY: { name: 'Turkish lira', symbol: '\u20ba' } },
+          languages: { tur: 'Turkish' }, latlng: [35.2, 33.7], ccn3: 'NC1', cca3: 'NC1'
+        },
+        {
+          name: { common: 'Somaliland', official: 'Republic of Somaliland' },
+          flags: { svg: 'https://upload.wikimedia.org/wikipedia/commons/4/4d/Flag_of_Somaliland.svg', png: 'https://flagcdn.com/w320/so.png' },
+          population: 5700000, region: 'Africa', subregion: 'Eastern Africa',
+          capital: ['Hargeisa'], currencies: { SLS: { name: 'Somaliland shilling', symbol: 'Sl' } },
+          languages: { som: 'Somali', ara: 'Arabic' }, latlng: [9.56, 44.06], ccn3: 'SL1', cca3: 'SL1'
+        },
+        {
+          name: { common: 'Kosovo', official: 'Republic of Kosovo' },
+          flags: { svg: 'https://flagcdn.com/xk.svg', png: 'https://flagcdn.com/w320/xk.png' },
+          population: 1800000, region: 'Europe', subregion: 'Southeast Europe',
+          capital: ['Pristina'], currencies: { EUR: { name: 'Euro', symbol: '\u20ac' } },
+          languages: { sqi: 'Albanian', srp: 'Serbian' }, latlng: [42.6, 21.0], ccn3: 'XK1', cca3: 'XKX'
+        }
+      ];
+
+      // Assign unrecognized territories to features with empty IDs based on centroid proximity
+      function matchUnrecognized(feature) {
+        // Compute rough centroid from the feature's coordinates
+        var coords = [];
+        var geom = feature.geometry;
+        if (geom.type === 'Polygon') {
+          coords = geom.coordinates[0];
+        } else if (geom.type === 'MultiPolygon') {
+          coords = geom.coordinates[0][0];
+        }
+        if (coords.length === 0) return null;
+        var sumLon = 0, sumLat = 0;
+        for (var i = 0; i < coords.length; i++) {
+          sumLon += coords[i][0];
+          sumLat += coords[i][1];
+        }
+        var cLon = sumLon / coords.length;
+        var cLat = sumLat / coords.length;
+
+        // Find nearest unrecognized territory
+        var best = null, bestDist = Infinity;
+        for (var j = 0; j < UNRECOGNIZED_TERRITORIES.length; j++) {
+          var t = UNRECOGNIZED_TERRITORIES[j];
+          var dLon = cLon - t.latlng[1];
+          var dLat = cLat - t.latlng[0];
+          var dist = dLon * dLon + dLat * dLat;
+          if (dist < bestDist) {
+            bestDist = dist;
+            best = t;
+          }
+        }
+        return best;
+      }
+
+      // --- Highlight visited countries on map ---
+      function highlightVisitedOnMap() {
+        if (!geoLayer) return;
+        var visited = getVisited();
+        geoLayer.eachLayer(function (layer) {
+          if (layer._countryData && visited.includes(layer._countryData.name.common)) {
+            clearFlagFill(layer);
+            layer.setStyle(visitedStyle());
+            // Reset SVG fill to use Leaflet style instead of flag pattern
+            if (layer._path) {
+              layer._path.removeAttribute('fill');
+              layer._path.removeAttribute('fill-opacity');
+              layer._path.removeAttribute('stroke');
+              layer._path.removeAttribute('stroke-width');
+              layer._path.removeAttribute('stroke-opacity');
+            }
+            layer.setStyle(visitedStyle());
+          }
+        });
+      }
+
+      // Helper: get all sibling layers for a country
+      function getGroup(layer) {
+        return layer._countryGroup || [layer];
+      }
+
+      // --- Mouse events ---
+      function onMouseOver(e) {
+        var layer = e.target;
+        var group = getGroup(layer);
+        // Skip if any part of this country is currently selected
+        if (group.indexOf(selectedLayer) !== -1) return;
+        if (detailOverlay.classList.contains('open')) return;
+        // Skip if this country already has a flag applied
+        if (layer._flagPatternId) return;
+        group.forEach(function (l) { if (!l._flagPatternId) l.setStyle(hoverStyle()); });
+      }
+
+      function onMouseOut(e) {
+        var layer = e.target;
+        var group = getGroup(layer);
+        if (group.indexOf(selectedLayer) !== -1) return;
+        // Skip if this country has a flag applied
+        if (layer._flagPatternId) return;
+        var isVis = layer._countryData && isVisited(layer._countryData.name.common);
+        var style = isVis ? visitedStyle() : defaultStyle();
+        group.forEach(function (l) { if (!l._flagPatternId) l.setStyle(style); });
+      }
+
+      function onCountryClick(e) {
+        var layer = e.target;
+        var country = layer._countryData;
+        if (!country) {
+          var fname = (layer.feature && layer.feature.properties && layer.feature.properties.name) || '';
+          if (!fname) return;
+          country = {
+            name: { common: fname }, flags: {}, population: null,
+            region: '', subregion: '', capital: [], currencies: {},
+            languages: {}, latlng: null, ccn3: layer._featureId || '', cca3: ''
+          };
+          // Set on all siblings
+          getGroup(layer).forEach(function (l) { l._countryData = country; });
+        }
+
+        // Deselect previous country group (but keep its flag)
+        if (selectedLayer && getGroup(selectedLayer).indexOf(layer) === -1) {
+          selectedLayer = null;
+        }
+
+        selectedLayer = layer;
+        currentCountry = country;
+
+        // Show detail panel
+        showDetail(country);
+
+        // Fly to the full country bounds (union of all island bboxes)
+        var group = getGroup(layer);
+        var bounds = L.latLngBounds([]);
+        group.forEach(function (l) { bounds.extend(l.getBounds()); });
+        map.flyToBounds(bounds, { maxZoom: 5, duration: 0.8, padding: [50, 50] });
+
+        // Fill each island with its own fitted flag pattern
+        try {
+          group.forEach(function (l, idx) {
+            applyFlagFill(l, country, idx);
+          });
+        } catch (err) {
+          console.error('Flag fill failed:', err);
+        }
+
+        // Track this country as flagged
+        if (country.name && country.name.common) {
+          flaggedCountries.add(country.name.common);
+          updateFlagCounter();
+        }
+      }
+
+      // --- SVG Flag Fill (per-island: each path gets its own pattern) ---
+      function applyFlagFill(layer, country, idx) {
+        var flagUrl = country.flags && country.flags.svg ? country.flags.svg : '';
+        if (!flagUrl) {
+          layer.setStyle({ fillColor: '#6C63FF', fillOpacity: 0.7, weight: 2, color: '#fff', opacity: 1 });
+          return;
+        }
+
+        var renderer = map.getRenderer(layer);
+        var svgRoot = renderer && renderer._container;
+        if (!svgRoot) return;
+
+        var pathEl = layer._path;
+        if (!pathEl) return;
+
+        var defs = svgRoot.querySelector('defs');
+        if (!defs) {
+          defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+          svgRoot.insertBefore(defs, svgRoot.firstChild);
+        }
+
+        // Unique pattern per island piece
+        var patternId = 'flag-' + (country.ccn3 || country.cca3 || 'x') + '-' + (idx || 0);
+
+        var existingPat = document.getElementById(patternId);
+        if (existingPat) existingPat.remove();
+
+        var pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+        pattern.setAttribute('id', patternId);
+        pattern.setAttribute('patternUnits', 'objectBoundingBox');
+        pattern.setAttribute('width', '1');
+        pattern.setAttribute('height', '1');
+        pattern.setAttribute('viewBox', '0 0 600 400');
+        pattern.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+
+        var image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        image.setAttributeNS('http://www.w3.org/1999/xlink', 'href', flagUrl);
+        image.setAttribute('x', '0');
+        image.setAttribute('y', '0');
+        image.setAttribute('width', '600');
+        image.setAttribute('height', '400');
+        image.setAttribute('preserveAspectRatio', 'none');
+
+        pattern.appendChild(image);
+        defs.appendChild(pattern);
+
+        var fillRef = 'url(#' + patternId + ')';
+
+        layer.setStyle({
+          fillColor: fillRef,
+          fillOpacity: 1,
+          weight: 2,
+          color: '#ffffff',
+          opacity: 1
+        });
+
+        if (pathEl) {
+          pathEl.setAttribute('fill', fillRef);
+          pathEl.setAttribute('fill-opacity', '1');
+          pathEl.setAttribute('stroke', '#ffffff');
+          pathEl.setAttribute('stroke-width', '2');
+          pathEl.setAttribute('stroke-opacity', '1');
+        }
+
+        layer._flagPatternId = patternId;
+      }
+
+      function clearFlagFill(layer) {
+        if (layer._flagPatternId) {
+          var el = document.getElementById(layer._flagPatternId);
+          if (el) el.remove();
+          delete layer._flagPatternId;
+        }
+      }
+
+      // --- Panel open/close helpers ---
+      function openPanel() {
+        detailOverlay.classList.add('open');
+        document.body.classList.add('panel-open');
+      }
+
+      function closePanel() {
+        detailOverlay.classList.remove('open');
+        document.body.classList.remove('panel-open');
+        // If the selected country is visited, restore green style and remove flag
+        if (selectedLayer && currentCountry && isVisited(currentCountry.name.common)) {
+          var group = getGroup(selectedLayer);
+          group.forEach(function (l) {
+            clearFlagFill(l);
+            if (l._path) {
+              l._path.removeAttribute('fill');
+              l._path.removeAttribute('fill-opacity');
+              l._path.removeAttribute('stroke');
+              l._path.removeAttribute('stroke-width');
+              l._path.removeAttribute('stroke-opacity');
+            }
+            l.setStyle(visitedStyle());
+          });
+        }
+        selectedLayer = null;
+        currentCountry = null;
+      }
+
+      // --- Lightbox ---
+      var lightbox = document.createElement('div');
+      lightbox.className = 'img-lightbox';
+      lightbox.innerHTML = '<button class="img-lightbox-close" title="Close">&times;</button>' +
+        '<button class="img-lightbox-nav img-lightbox-prev" title="Previous">&#8249;</button>' +
+        '<img src="" alt="">' +
+        '<button class="img-lightbox-nav img-lightbox-next" title="Next">&#8250;</button>' +
+        '<div class="img-lightbox-counter"></div>';
+      document.body.appendChild(lightbox);
+      var lightboxImg = lightbox.querySelector('img');
+      var lightboxCounter = lightbox.querySelector('.img-lightbox-counter');
+      var lightboxGallery = [];
+      var lightboxIdx = 0;
+
+      function closeLightbox() { lightbox.classList.remove('open'); }
+      function showLightboxImage(idx) {
+        if (idx < 0 || idx >= lightboxGallery.length) return;
+        lightboxIdx = idx;
+        lightboxImg.classList.add('loading');
+        var highRes = lightboxGallery[idx].replace(/\/\d+px-/, '/1200px-');
+        var temp = new Image();
+        temp.onload = function () {
+          lightboxImg.src = highRes;
+          lightboxImg.classList.remove('loading');
+        };
+        temp.onerror = function () {
+          lightboxImg.src = lightboxGallery[idx];
+          lightboxImg.classList.remove('loading');
+        };
+        temp.src = highRes;
+        lightboxImg.src = highRes;
+        lightboxImg.alt = 'Photo ' + (idx + 1);
+        lightboxCounter.textContent = (idx + 1) + ' / ' + lightboxGallery.length;
+      }
+
+      lightbox.querySelector('.img-lightbox-close').addEventListener('click', closeLightbox);
+      lightbox.querySelector('.img-lightbox-prev').addEventListener('click', function (e) {
+        e.stopPropagation();
+        showLightboxImage((lightboxIdx - 1 + lightboxGallery.length) % lightboxGallery.length);
+      });
+      lightbox.querySelector('.img-lightbox-next').addEventListener('click', function (e) {
+        e.stopPropagation();
+        showLightboxImage((lightboxIdx + 1) % lightboxGallery.length);
+      });
+      lightbox.addEventListener('click', function (e) {
+        if (e.target === lightbox) closeLightbox();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (!lightbox.classList.contains('open')) return;
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowLeft') showLightboxImage((lightboxIdx - 1 + lightboxGallery.length) % lightboxGallery.length);
+        if (e.key === 'ArrowRight') showLightboxImage((lightboxIdx + 1) % lightboxGallery.length);
+      });
+
+      function openLightbox(srcs, startIdx) {
+        lightboxGallery = srcs;
+        lightbox.classList.add('open');
+        showLightboxImage(startIdx || 0);
+        srcs.forEach(function (s) { var i = new Image(); i.src = s.replace(/\/\d+px-/, '/1200px-'); });
+      }
+
+      // --- Country Images ---
+      var _allCountryPhotos = [];
+      var _currentImgCountry = '';
+
+      function showPhotosInGrid(photos, countryName) {
+        var grid = document.getElementById('countryImagesGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        photos.forEach(function (photo, idx) {
+          var img = document.createElement('img');
+          img.alt = photo.alt || countryName;
+          img.loading = 'lazy';
+          img.src = photo.small;
+          img.onerror = function () { this.style.display = 'none'; };
+          img.onclick = function () {
+            openLightbox(photos.map(function (p) { return p.regular; }), idx);
+          };
+          grid.appendChild(img);
+        });
+      }
+
+      function loadCountryImages(countryName) {
+        var grid = document.getElementById('countryImagesGrid');
+        if (!grid) return;
+        if (!UNSPLASH_ACCESS_KEY) {
+          grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.5;font-size:0.8rem">Add your Unsplash key in config.js</span>';
+          return;
+        }
+        _currentImgCountry = countryName;
+        grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.5;font-size:0.8rem">Loading photos...</span>';
+
+        var url = 'https://api.unsplash.com/search/photos?query=' +
+          encodeURIComponent(countryName + ' landmarks tourism') +
+          '&per_page=20&orientation=landscape&client_id=' + UNSPLASH_ACCESS_KEY;
+
+        fetch(url)
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+          .then(function (data) {
+            var results = data.results || [];
+            if (results.length === 0) {
+              grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.4;font-size:0.8rem">No photos found</span>';
+              _allCountryPhotos = [];
+              return;
+            }
+            _allCountryPhotos = results.map(function (r) {
+              return {
+                small: r.urls.small,
+                regular: r.urls.regular,
+                alt: r.alt_description || countryName
+              };
+            });
+            showPhotosInGrid(_allCountryPhotos, countryName);
+          })
+          .catch(function (err) {
+            grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.4;font-size:0.8rem">Could not load photos</span>';
+          });
+      }
+
+      document.getElementById('refreshImagesBtn').addEventListener('click', function () {
+        if (_currentImgCountry && UNSPLASH_ACCESS_KEY) {
+          // Fetch a new random page
+          var page = Math.floor(Math.random() * 5) + 1;
+          var grid = document.getElementById('countryImagesGrid');
+          grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.5;font-size:0.8rem">Loading photos...</span>';
+          var url = 'https://api.unsplash.com/search/photos?query=' +
+            encodeURIComponent(_currentImgCountry + ' landmarks tourism') +
+            '&per_page=20&orientation=landscape&page=' + page +
+            '&client_id=' + UNSPLASH_ACCESS_KEY;
+          fetch(url)
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+            .then(function (data) {
+              var results = data.results || [];
+              if (results.length === 0) { return; }
+              _allCountryPhotos = results.map(function (r) {
+                return { small: r.urls.small, regular: r.urls.regular, alt: r.alt_description || _currentImgCountry };
+              });
+              showPhotosInGrid(_allCountryPhotos, _currentImgCountry);
+            })
+            .catch(function () {});
+        }
+      });
+
+      // --- Detail Panel ---
+      function showDetail(country) {
+        // Flag image
+        if (country.flags && country.flags.svg) {
+          detailFlag.src = country.flags.svg;
+          detailFlag.style.display = '';
+        } else if (country.flags && country.flags.png) {
+          detailFlag.src = country.flags.png;
+          detailFlag.style.display = '';
+        } else {
+          detailFlag.src = '';
+          detailFlag.style.display = 'none';
+        }
+        detailFlag.alt = (country.name.common || 'Country') + ' flag';
+        detailName.textContent = country.name.common || 'Unknown';
+        detailCapital.textContent = country.capital && country.capital.length ? country.capital[0] : 'N/A';
+        detailPopulation.textContent = 'Population: ' + (country.population != null ? country.population.toLocaleString() : 'N/A');
+
+        // Currency
+        var currStr = '--';
+        if (country.currencies && Object.keys(country.currencies).length > 0) {
+          currStr = Object.values(country.currencies).map(function (c) {
+            return c.name + (c.symbol ? ' (' + c.symbol + ')' : '');
+          }).join(', ');
+        }
+        detailCurrency.textContent = currStr;
+
+        // Languages
+        var langStr = '--';
+        if (country.languages && Object.keys(country.languages).length > 0) {
+          langStr = Object.values(country.languages).join(', ');
+        }
+        detailLanguages.textContent = langStr;
+
+        // Map embed
+        if (country.latlng && country.latlng.length === 2) {
+          detailMapFrame.src = 'https://www.google.com/maps?q=' + country.latlng[0] + ',' + country.latlng[1] + '&z=5&output=embed';
+        } else {
+          detailMapFrame.src = 'https://www.google.com/maps?q=' + encodeURIComponent(country.name.common) + '&z=5&output=embed';
+        }
+
+        // Badges
+        detailBadges.innerHTML = '';
+        if (country.region) {
+          var b = document.createElement('span');
+          b.className = 'badge';
+          b.textContent = country.region;
+          detailBadges.appendChild(b);
+        }
+        if (country.subregion) {
+          var b2 = document.createElement('span');
+          b2.className = 'badge';
+          b2.textContent = country.subregion;
+          detailBadges.appendChild(b2);
+        }
+
+        updateVisitedBadge();
+
+        // Country images
+        loadCountryImages(country.name.common);
+
+        // AI content
+        aiLoading.style.display = 'none';
+        aiContent.style.display = 'none';
+        funFactText.textContent = '';
+        dishText.textContent = '';
+
+        if (apiKey) {
+          fetchAIContent(country.name.common);
+        }
+
+        // Open panel
+        openPanel();
+      }
+
+      function updateVisitedBadge() {
+        if (!currentCountry) return;
+        var name = currentCountry.name.common;
+        var existing = detailBadges.querySelector('.visited-badge');
+        if (isVisited(name)) {
+          if (!existing) {
+            var b = document.createElement('span');
+            b.className = 'badge visited-badge';
+            b.textContent = 'Visited';
+            detailBadges.appendChild(b);
+          }
+          markVisitedBtn.textContent = 'Already Visited';
+          markVisitedBtn.classList.add('already-visited');
+          detailPanel.classList.add('visited-glow');
+        } else {
+          if (existing) existing.remove();
+          markVisitedBtn.textContent = 'Mark as Visited';
+          markVisitedBtn.classList.remove('already-visited');
+          detailPanel.classList.remove('visited-glow');
+        }
+      }
+
+      // --- Close panel ---
+      detailClose.addEventListener('click', closePanel);
+
+      // Close on Escape
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closePanel();
+      });
+
+      // --- Mark Visited ---
+      markVisitedBtn.addEventListener('click', function () {
+        if (!currentCountry) return;
+        var name = currentCountry.name.common;
+        toggleVisited(name);
+        // Instantly apply green to this country's layers
+        if (geoLayer && isVisited(name)) {
+          var group = selectedLayer ? getGroup(selectedLayer) : [];
+          group.forEach(function (l) {
+            clearFlagFill(l);
+            if (l._path) {
+              l._path.removeAttribute('fill');
+              l._path.removeAttribute('fill-opacity');
+              l._path.removeAttribute('stroke');
+              l._path.removeAttribute('stroke-width');
+              l._path.removeAttribute('stroke-opacity');
+            }
+            l.setStyle(visitedStyle());
+          });
+          // Also catch any other layers for this country not in the group
+          highlightVisitedOnMap();
+        }
+      });
+
+      // --- RestCountries API ---
+      var API_FIELDS = 'fields=name,flags,population,region,subregion,capital,currencies,languages,latlng,ccn3,cca3';
+      async function fetchAllCountries() {
+        if (countriesCache) return countriesCache;
+        // Try /all first
+        try {
+          var resp = await fetch('https://restcountries.com/v3.1/all?' + API_FIELDS);
+          if (resp.ok) {
+            var data = await resp.json();
+            countriesCache = data;
+            return data;
+          }
+        } catch (e) { /* fall through to region fallback */ }
+        // Fallback: fetch all regions in parallel
+        var regions = ['africa', 'americas', 'asia', 'europe', 'oceania', 'antarctic'];
+        var promises = regions.map(function (r) {
+          return fetch('https://restcountries.com/v3.1/region/' + r + '?' + API_FIELDS)
+            .then(function (res) { return res.ok ? res.json() : []; })
+            .catch(function () { return []; });
+        });
+        var results = await Promise.all(promises);
+        var all = [];
+        results.forEach(function (arr) { all = all.concat(arr); });
+        if (all.length === 0) throw new Error('Could not load country data.');
+        countriesCache = all;
+        return all;
+      }
+
+      // --- Gemini AI ---
+      async function fetchAIContent(countryNameStr) {
+        if (!apiKey) return;
+
+        // Check cache first
+        var cacheKey = 'ai_cache_' + countryNameStr.toLowerCase().replace(/\s+/g, '_');
+        try {
+          var cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            var p = JSON.parse(cached);
+            funFactText.textContent = p.funFact || 'No fun fact available.';
+            dishText.textContent = p.dish || 'No dish information available.';
+            aiLoading.style.display = 'none';
+            aiContent.style.display = '';
+            return;
+          }
+        } catch (_) {}
+
+        aiLoading.style.display = '';
+        aiLoading.innerHTML = '<span class="spinner"></span> Fetching AI insights...';
+        aiContent.style.display = 'none';
+
+        var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemma-3-1b-it:generateContent?key=' + apiKey;
+
+        var body = {
+          contents: [{
+            parts: [{
+              text: 'Give me one fun fact and one traditional local dish for ' + countryNameStr + '. Respond ONLY with valid JSON, no markdown, no explanation: { "funFact": "...", "dish": "..." }'
+            }]
+          }]
+        };
+
+        var resp;
+        var maxRetries = 5;
+        for (var attempt = 0; attempt < maxRetries; attempt++) {
+          resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+
+          if (resp.status === 429 && attempt < maxRetries - 1) {
+            var retryMatch = null;
+            try {
+              var errClone = await resp.clone().json();
+              var msg = (errClone.error && errClone.error.message) || '';
+              retryMatch = msg.match(/retry in ([\d.]+)s/i);
+            } catch (_) {}
+            var waitSec = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) + 2 : 30;
+            if (waitSec > 65) waitSec = 65;
+            aiLoading.innerHTML = '<span class="spinner"></span> Rate limited — retrying in ' + waitSec + 's...';
+            await new Promise(function (r) { setTimeout(r, waitSec * 1000); });
+            continue;
+          }
+
+          if (!resp.ok) {
+            aiLoading.style.display = 'none';
+            return;
+          }
+          break;
+        }
+
+        try {
+          var data = await resp.json();
+          var text = '';
+          if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+            text = data.candidates[0].content.parts.map(function (p) { return p.text || ''; }).join('');
+          }
+          var jsonMatch = text.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) {
+            funFactText.textContent = 'Could not parse AI response.';
+            dishText.textContent = 'Could not parse AI response.';
+            aiLoading.style.display = 'none';
+            aiContent.style.display = '';
+            return;
+          }
+          var parsed = JSON.parse(jsonMatch[0]);
+          // Cache the result
+          try { localStorage.setItem(cacheKey, JSON.stringify(parsed)); } catch (_) {}
+          funFactText.textContent = parsed.funFact || 'No fun fact available.';
+          dishText.textContent = parsed.dish || 'No dish information available.';
+          aiLoading.style.display = 'none';
+          aiContent.style.display = '';
+        } catch (err) {
+          aiLoading.style.display = 'none';
+          funFactText.textContent = 'Could not fetch AI insights.';
+          dishText.textContent = '';
+          aiContent.style.display = '';
+        }
+      }
+
+      // --- Init ---
+      updateStats();
+    })();
+  </script>
+</body>
+</html>
