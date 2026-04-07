@@ -22,9 +22,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Inject API key
+      - name: Inject API keys
         run: |
           echo "const GEMINI_API_KEY = '${{ secrets.GEMINI_API_KEY }}';" > config.js
+          echo "const UNSPLASH_ACCESS_KEY = '${{ secrets.UNSPLASH_ACCESS_KEY }}';" >> config.js
 
       - uses: actions/configure-pages@v5
 
