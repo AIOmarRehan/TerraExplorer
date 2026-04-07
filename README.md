@@ -1,5 +1,7 @@
 # TerraExplorer
 
+![Earth](Earth.gif)
+
 A single-page web app that picks a random country and displays its key info alongside AI-generated insights. Built with vanilla HTML, CSS, and JavaScript with no build tools required.
 
 ## Features
