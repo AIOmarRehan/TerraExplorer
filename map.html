@@ -880,7 +880,15 @@
         gap: 0.3rem;
       }
       .country-images-grid img { border-radius: 5px; }
-      .map-embed iframe { height: 160px; }
+      .map-embed {
+        height: 160px;
+      }
+      .map-embed iframe {
+        width: 200%;
+        height: 320px;
+        transform: scale(0.5);
+        transform-origin: 0 0;
+      }
       .fun-fact-block, .dish-block {
         padding: 0.75rem 0.85rem;
         font-size: 0.82rem;
@@ -1919,7 +1927,7 @@
       });
 
       // --- RestCountries API ---
-      var API_FIELDS = 'fields=name,flags,population,region,subregion,capital,currencies,languages,latlng,ccn3,cca3';
+      var API_FIELDS = 'fields=name,flags,population,region,subregion,capital,currencies,languages,latlng,ccn3';
       async function fetchAllCountries() {
         if (countriesCache) return countriesCache;
         // Try /all first
@@ -1971,7 +1979,7 @@
         aiLoading.innerHTML = '<span class="spinner"></span> Fetching AI insights...';
         aiContent.style.display = 'none';
 
-        var models = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+        var models = ['gemini-2.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview', 'gemini-2.5-flash-lite'];
         var baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
         var body = {
@@ -1986,9 +1994,10 @@
         };
 
         var resp;
-        var maxRetries = 5;
-        for (var attempt = 0; attempt < maxRetries; attempt++) {
-          var modelIdx = Math.min(attempt, models.length - 1);
+        var modelIdx = 0;
+        var retried = false;
+
+        while (true) {
           var url = baseUrl + models[modelIdx] + ':generateContent?key=' + apiKey;
 
           resp = await fetch(url, {
@@ -1997,27 +2006,26 @@
             body: JSON.stringify(body)
           });
 
-          if (resp.status === 503 && attempt < maxRetries - 1) {
-            aiLoading.innerHTML = '<span class="spinner"></span> Model busy — switching to fallback...';
-            await new Promise(function (r) { setTimeout(r, 1000); });
-            continue;
-          }
-
-          if (resp.status === 429 && attempt < maxRetries - 1) {
-            var retryMatch = null;
-            try {
-              var errClone = await resp.clone().json();
-              var msg = (errClone.error && errClone.error.message) || '';
-              retryMatch = msg.match(/retry in ([\d.]+)s/i);
-            } catch (_) {}
-            var waitSec = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) + 2 : 30;
-            if (waitSec > 65) waitSec = 65;
-            aiLoading.innerHTML = '<span class="spinner"></span> Rate limited — retrying in ' + waitSec + 's...';
-            await new Promise(function (r) { setTimeout(r, waitSec * 1000); });
-            continue;
+          if (resp.status === 429 || resp.status === 503) {
+            if (modelIdx < models.length - 1) {
+              modelIdx++;
+              aiLoading.innerHTML = '<span class="spinner"></span> High Demand — switching model...';
+              await new Promise(function (r) { setTimeout(r, 500); });
+              continue;
+            }
+            if (!retried) {
+              retried = true;
+              modelIdx = 0;
+              aiLoading.innerHTML = '<span class="spinner"></span> Rate limited — retrying in 59s...';
+              await new Promise(function (r) { setTimeout(r, 59000); });
+              continue;
+            }
+            aiLoading.style.display = 'none';
+            return;
           }
 
           if (!resp.ok) {
+            if (modelIdx < models.length - 1) { modelIdx++; continue; }
             aiLoading.style.display = 'none';
             return;
           }
@@ -2056,6 +2064,7 @@
 
       // --- Init ---
       updateStats();
+
     })();
   </script>
 </body>
