@@ -293,7 +293,24 @@
       .splash-scene { width: 160px; height: 160px; }
       .splash-earth { width: 80px; height: 80px; }
       .splash-orbit, .splash-orbit-ring { width: 140px; height: 140px; }
-      .splash-moon { width: 22px; height: 22px; margin-left: -11px; top: -11px; }
+      .splash-moon {
+        width: 24px;
+        height: 24px;
+        margin-left: -12px;
+        top: -12px;
+        background: radial-gradient(circle at 35% 30%, #ffffff 0%, #e8e8e8 30%, #d0d0d0 60%, #a8a8a8 100%);
+        box-shadow:
+          inset -3px -2px 5px rgba(0,0,0,0.25),
+          0 0 12px rgba(255,255,255,0.4),
+          0 0 25px rgba(255,255,255,0.15);
+      }
+      .splash-moon::before {
+        top: 5px;
+        left: 6px;
+        width: 5px;
+        height: 5px;
+        box-shadow: 6px 6px 0 1.5px rgba(140,140,140,0.35), -1px 10px 0 1px rgba(140,140,140,0.3);
+      }
       .splash-glow { width: 110px; height: 110px; }
     }
 
@@ -2438,38 +2455,55 @@
       async function fetchAIContent(countryNameStr) {
         if (!apiKey) return null;
 
-        // Check cache first
+        // Check cache first (expires after 24h for fresh content)
         var cacheKey = 'ai_cache_' + countryNameStr.toLowerCase().replace(/\s+/g, '_');
         try {
           var cached = localStorage.getItem(cacheKey);
-          if (cached) return JSON.parse(cached);
+          if (cached) {
+            var cacheData = JSON.parse(cached);
+            if (cacheData._ts && Date.now() - cacheData._ts < 86400000) return cacheData;
+            localStorage.removeItem(cacheKey);
+          }
         } catch (_) {}
 
         aiLoading.style.display = '';
         aiContent.style.display = 'none';
 
-        const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;
+        const models = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+        const baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
         const body = {
           contents: [
             {
               parts: [
                 {
-                  text: 'Give me one fun fact and one traditional local dish for ' + countryNameStr + '. Respond ONLY with valid JSON, no markdown, no explanation: { "funFact": "...", "dish": "..." }'
+                  text: 'You are a geography and culture expert. For the country "' + countryNameStr + '" specifically (not any other country), provide:\n1. One unique, surprising, and ACCURATE fun fact that is specific ONLY to ' + countryNameStr + '. Do NOT reuse generic facts that could apply to multiple countries.\n2. One authentic traditional local dish that originates from ' + countryNameStr + ', with a brief description of what it is.\nRespond ONLY with valid JSON, no markdown, no explanation: { "funFact": "...", "dish": "..." }'
                 }
               ]
             }
-          ]
+          ],
+          generationConfig: {
+            temperature: 1.2
+          }
         };
 
         var resp;
         var maxRetries = 5;
         for (var attempt = 0; attempt < maxRetries; attempt++) {
+          var modelIdx = Math.min(attempt, models.length - 1);
+          var url = baseUrl + models[modelIdx] + ':generateContent?key=' + apiKey;
+
           resp = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
           });
+
+          if (resp.status === 503 && attempt < maxRetries - 1) {
+            aiLoading.innerHTML = '<span class="spinner"></span> Model busy — switching to fallback...';
+            await new Promise(function (r) { setTimeout(r, 1000); });
+            continue;
+          }
 
           if (resp.status === 429 && attempt < maxRetries - 1) {
             var retryMatch = null;
@@ -2510,7 +2544,8 @@
         if (!jsonMatch) throw new Error('parse');
 
         const parsed = JSON.parse(jsonMatch[0]);
-        // Cache the result
+        // Cache the result with timestamp
+        parsed._ts = Date.now();
         try { localStorage.setItem(cacheKey, JSON.stringify(parsed)); } catch (_) {}
         return parsed;
       }
