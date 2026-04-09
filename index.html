@@ -896,8 +896,14 @@
     }
     .country-images-header .country-images-title { margin-bottom: 0; }
 
-    .mark-visited-btn {
+    .card-actions {
+      display: flex;
+      gap: 10px;
       margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .mark-visited-btn {
       padding: 0.65rem 1.75rem;
       border: none;
       border-radius: 10px;
@@ -907,6 +913,8 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
+      flex: 1;
+      min-width: 140px;
     }
 
     .mark-visited-btn:hover {
@@ -918,6 +926,29 @@
       background: rgba(34, 197, 94, 0.4);
       color: #fff;
       cursor: default;
+    }
+
+    .view-on-map-btn {
+      padding: 0.65rem 1.75rem;
+      border: none;
+      border-radius: 10px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex: 1;
+      min-width: 140px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .view-on-map-btn:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 4px 16px var(--primary-glow);
     }
 
     /* ===== VISITED PANEL ===== */
@@ -1475,6 +1506,11 @@
         font-size: 0.82rem;
       }
 
+      .view-on-map-btn {
+        padding: 0.55rem 1rem;
+        font-size: 0.82rem;
+      }
+
       /* Lightbox mobile */
       .img-lightbox img { max-width: 95vw; max-height: 80vh; border-radius: 6px; }
       .img-lightbox-nav { width: 36px; height: 36px; font-size: 1.4rem; }
@@ -1519,6 +1555,122 @@
       .info-grid { grid-template-columns: 1fr; gap: 0.4rem; }
 
       .header-title { font-size: 0.82rem; }
+    }
+
+    /* ===== GEO WELCOME TOAST ===== */
+    .geo-toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120px);
+      z-index: 8000;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 22px;
+      max-width: min(92vw, 480px);
+      border-radius: 16px;
+      border: 1px solid var(--card-border);
+      background: rgba(12, 14, 43, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(108, 99, 255, 0.1);
+      cursor: pointer;
+      opacity: 0;
+      transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease;
+      user-select: none;
+    }
+    [data-theme="light"] .geo-toast {
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(108, 99, 255, 0.15);
+    }
+    .geo-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .geo-toast.hide {
+      opacity: 0;
+      transform: translateX(-50%) translateY(120px);
+      pointer-events: none;
+    }
+    .geo-toast-flag {
+      width: 48px;
+      height: 36px;
+      border-radius: 6px;
+      object-fit: cover;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+    .geo-toast-body {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+    }
+    .geo-toast-title {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .geo-toast-title .geo-country {
+      color: var(--primary);
+      font-weight: 700;
+    }
+    .geo-toast-cta {
+      font-size: 0.78rem;
+      color: var(--primary);
+      opacity: 0.85;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .geo-toast-cta .arrow {
+      display: inline-block;
+      transition: transform 0.25s ease;
+    }
+    .geo-toast:hover .geo-toast-cta .arrow {
+      transform: translateX(4px);
+    }
+    .geo-toast-close {
+      position: absolute;
+      top: 6px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 2px 4px;
+      line-height: 1;
+      opacity: 0.5;
+      transition: opacity 0.2s;
+    }
+    .geo-toast-close:hover { opacity: 1; }
+    .geo-toast-shimmer {
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .geo-toast-shimmer::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(108,99,255,0.06), transparent);
+      animation: geoShimmer 3s ease-in-out infinite;
+    }
+    @keyframes geoShimmer {
+      0% { left: -60%; }
+      100% { left: 120%; }
+    }
+    @media (max-width: 480px) {
+      .geo-toast { bottom: 16px; padding: 12px 16px; gap: 10px; }
+      .geo-toast-flag { width: 40px; height: 30px; }
+      .geo-toast-title { font-size: 0.84rem; }
+      .geo-toast-cta { font-size: 0.72rem; }
     }
   </style>
 </head>
@@ -1792,7 +1944,10 @@
             </div>
           </div>
         </div>
-        <button class="mark-visited-btn" id="markVisitedBtn" type="button">Mark as Visited</button>
+        <div class="card-actions">
+          <button class="mark-visited-btn" id="markVisitedBtn" type="button">Mark as Visited</button>
+          <button class="view-on-map-btn" id="viewOnMapBtn" type="button">&#x1F5FA;&#xFE0F; Discover on Map</button>
+        </div>
       </div>
 
       <!-- History Panel -->
@@ -2606,6 +2761,22 @@
         toggleVisited(currentCountry.name.common);
       });
 
+      // --- View on Map ---
+      document.getElementById('viewOnMapBtn').addEventListener('click', function () {
+        if (!currentCountry) return;
+        var payload = { country: currentCountry.name.common };
+        var fact = funFactText.textContent;
+        var dish = dishText.textContent;
+        if (fact && fact !== 'No fun fact available.' && fact !== 'Could not parse AI response.' && fact !== 'Could not fetch AI insights.') {
+          payload.funFact = fact;
+        }
+        if (dish && dish !== 'No dish information available.' && dish !== 'Could not parse AI response.') {
+          payload.dish = dish;
+        }
+        try { sessionStorage.setItem('terraexplorer_mapcountry', JSON.stringify(payload)); } catch (_) {}
+        window.location.href = 'map.html';
+      });
+
       // --- Init ---
       renderVisitedPanel();
       renderHistoryPanel();
@@ -2615,6 +2786,108 @@
         renderVisitedPanel();
         renderHistoryPanel();
       }).catch(function () {});
+
+      // --- Geo Welcome Toast ---
+      (function geoWelcome() {
+        // Only show once per session
+        if (sessionStorage.getItem('geo_toast_shown')) return;
+        sessionStorage.setItem('geo_toast_shown', '1');
+
+        // Create toast element
+        var toast = document.createElement('div');
+        toast.className = 'geo-toast';
+        toast.setAttribute('role', 'status');
+        toast.innerHTML =
+          '<div class="geo-toast-shimmer"></div>' +
+          '<img class="geo-toast-flag" id="geoToastFlag" src="" alt="">' +
+          '<div class="geo-toast-body">' +
+            '<div class="geo-toast-title" id="geoToastTitle"></div>' +
+            '<div class="geo-toast-cta">Tap to explore photos, fun facts & cuisine <span class="arrow">&rarr;</span></div>' +
+          '</div>' +
+          '<button class="geo-toast-close" title="Dismiss" aria-label="Dismiss">&times;</button>';
+        document.body.appendChild(toast);
+
+        var geoFlag = document.getElementById('geoToastFlag');
+        var geoTitle = document.getElementById('geoToastTitle');
+
+        // Dismiss helpers
+        function dismissToast() {
+          toast.classList.remove('show');
+          toast.classList.add('hide');
+          setTimeout(function () { toast.remove(); }, 600);
+        }
+        toast.querySelector('.geo-toast-close').addEventListener('click', function (e) {
+          e.stopPropagation();
+          dismissToast();
+        });
+
+        // Auto-dismiss after 12s
+        var autoDismiss;
+        function startAutoDismiss() {
+          autoDismiss = setTimeout(dismissToast, 12000);
+        }
+
+        // Detect country via IP (no permission needed)
+        fetch('https://ipapi.co/json/')
+          .then(function (r) { return r.json(); })
+          .then(function (geo) {
+            if (!geo || !geo.country_name) return;
+            var detectedCountry = geo.country_name;
+
+            // Wait for countries cache then match
+            fetchAllCountries().then(function (countries) {
+              var matched = countries.find(function (c) {
+                return c.name && c.name.common &&
+                  c.name.common.toLowerCase() === detectedCountry.toLowerCase();
+              });
+              if (!matched) {
+                // Try partial match
+                matched = countries.find(function (c) {
+                  return c.name && c.name.common &&
+                    (c.name.common.toLowerCase().includes(detectedCountry.toLowerCase()) ||
+                     detectedCountry.toLowerCase().includes(c.name.common.toLowerCase()));
+                });
+              }
+              if (!matched) return;
+
+              var cName = matched.name.common;
+              geoFlag.src = matched.flags && matched.flags.svg ? matched.flags.svg : '';
+              geoFlag.alt = cName + ' flag';
+              geoTitle.innerHTML = 'It looks like you\u2019re visiting from <span class="geo-country">' +
+                cName + '</span> \uD83C\uDF0D';
+
+              // Click loads that country
+              toast.addEventListener('click', function () {
+                clearTimeout(autoDismiss);
+                dismissToast();
+                renderCard(matched);
+                addToHistory(matched);
+                // Fetch AI content
+                if (apiKey) {
+                  aiLoading.style.display = '';
+                  aiContent.style.display = 'none';
+                  fetchAIContent(cName).then(function (ai) {
+                    if (ai) {
+                      funFactText.textContent = ai.funFact || 'No fun fact available.';
+                      dishText.textContent = ai.dish || 'No dish information available.';
+                      aiLoading.style.display = 'none';
+                      aiContent.style.display = '';
+                    }
+                  }).catch(function () {
+                    aiLoading.style.display = 'none';
+                  });
+                }
+              });
+
+              // Show after splash is gone (splash takes ~4.8s)
+              setTimeout(function () {
+                toast.classList.add('show');
+                startAutoDismiss();
+              }, 5500);
+            });
+          })
+          .catch(function () { /* silently fail — toast just won't show */ });
+      })();
 
     })();
   </script>

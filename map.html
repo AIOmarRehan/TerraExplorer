@@ -1371,6 +1371,95 @@
 
         // Apply green style to visited countries on initial load
         highlightVisitedOnMap();
+
+        // --- Handle incoming country from Explorer (via sessionStorage) ---
+        var incomingPayload = null;
+        try {
+          var raw = sessionStorage.getItem('terraexplorer_mapcountry');
+          if (raw) {
+            incomingPayload = JSON.parse(raw);
+            sessionStorage.removeItem('terraexplorer_mapcountry');
+          }
+        } catch (_) {}
+
+        if (incomingPayload && incomingPayload.country) {
+          var incomingCountry = incomingPayload.country;
+          // Find the first layer matching this country
+          var targetLayer = null;
+          var inLower = incomingCountry.toLowerCase();
+
+          // Pass 1: exact match on _countryData.name.common
+          geoLayer.eachLayer(function (l) {
+            if (!targetLayer && l._countryData && l._countryData.name &&
+                l._countryData.name.common.toLowerCase() === inLower) {
+              targetLayer = l;
+            }
+          });
+
+          // Pass 2: partial / includes match
+          if (!targetLayer) {
+            geoLayer.eachLayer(function (l) {
+              if (!targetLayer && l._countryData && l._countryData.name) {
+                var cn = l._countryData.name.common.toLowerCase();
+                if (cn.includes(inLower) || inLower.includes(cn)) {
+                  targetLayer = l;
+                }
+              }
+            });
+          }
+
+          // Pass 3: match by feature.properties.name (TopoJSON name)
+          if (!targetLayer) {
+            geoLayer.eachLayer(function (l) {
+              if (!targetLayer && l.feature && l.feature.properties && l.feature.properties.name) {
+                var fn = l.feature.properties.name.toLowerCase();
+                if (fn === inLower || fn.includes(inLower) || inLower.includes(fn)) {
+                  targetLayer = l;
+                }
+              }
+            });
+          }
+
+          if (targetLayer) {
+            // Simulate a click on this country
+            var country = targetLayer._countryData || {
+              name: { common: incomingCountry }, flags: {}, population: null,
+              region: '', subregion: '', capital: [], currencies: {},
+              languages: {}, latlng: null, ccn3: ''
+            };
+            selectedLayer = targetLayer;
+            currentCountry = country;
+
+            var hasPassedFacts = !!(incomingPayload.funFact || incomingPayload.dish);
+            showDetail(country, hasPassedFacts);
+
+            // Fly to bounds (slight delay ensures map is rendered)
+            var grp = getGroup(targetLayer);
+            var bounds = L.latLngBounds([]);
+            grp.forEach(function (l) { bounds.extend(l.getBounds()); });
+            setTimeout(function () {
+              map.flyToBounds(bounds, { maxZoom: 5, duration: 0.8, padding: [50, 50] });
+            }, 300);
+
+            // Apply flag fill
+            try {
+              grp.forEach(function (l, idx) { applyFlagFill(l, country, idx); });
+            } catch (e) {}
+            if (country.name && country.name.common) {
+              flaggedCountries.add(country.name.common);
+              updateFlagCounter();
+            }
+
+            // Pre-fill AI facts from passed data (skip Gemini call)
+            if (hasPassedFacts) {
+              aiLoading.style.display = 'none';
+              funFactText.textContent = incomingPayload.funFact || 'No fun fact available.';
+              dishText.textContent = incomingPayload.dish || 'No dish information available.';
+              aiContent.style.display = '';
+            }
+          }
+        }
+
       }).catch(function (err) {
         console.error('Map loading failed:', err);
       });
@@ -1792,7 +1881,7 @@
       });
 
       // --- Detail Panel ---
-      function showDetail(country) {
+      function showDetail(country, skipAI) {
         // Flag image
         if (country.flags && country.flags.svg) {
           detailFlag.src = country.flags.svg;
@@ -1858,7 +1947,7 @@
         funFactText.textContent = '';
         dishText.textContent = '';
 
-        if (apiKey) {
+        if (apiKey && !skipAI) {
           fetchAIContent(country.name.common);
         }
 
