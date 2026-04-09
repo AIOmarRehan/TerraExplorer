@@ -2062,7 +2062,7 @@
         aiLoading.innerHTML = '<span class="spinner"></span> Fetching AI insights...';
         aiContent.style.display = 'none';
 
-        var models = ['gemini-2.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview', 'gemini-2.5-flash-lite'];
+        var models = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview'];
         var baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
         var body = {
@@ -2078,29 +2078,37 @@
 
         var resp;
         var modelIdx = 0;
-        var retried = false;
 
         while (true) {
           var url = baseUrl + models[modelIdx] + ':generateContent?key=' + apiKey;
 
-          resp = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-          });
+          // 8-second timeout per model attempt
+          var controller = new AbortController();
+          var timeoutId = setTimeout(function () { controller.abort(); }, 8000);
+
+          try {
+            resp = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+              signal: controller.signal
+            });
+          } catch (fetchErr) {
+            clearTimeout(timeoutId);
+            if (modelIdx < models.length - 1) {
+              modelIdx++;
+              aiLoading.innerHTML = '<span class="spinner"></span> Switching model...';
+              continue;
+            }
+            aiLoading.style.display = 'none';
+            return;
+          }
+          clearTimeout(timeoutId);
 
           if (resp.status === 429 || resp.status === 503) {
             if (modelIdx < models.length - 1) {
               modelIdx++;
               aiLoading.innerHTML = '<span class="spinner"></span> High Demand — switching model...';
-              await new Promise(function (r) { setTimeout(r, 500); });
-              continue;
-            }
-            if (!retried) {
-              retried = true;
-              modelIdx = 0;
-              aiLoading.innerHTML = '<span class="spinner"></span> Rate limited — retrying in 59s...';
-              await new Promise(function (r) { setTimeout(r, 59000); });
               continue;
             }
             aiLoading.style.display = 'none';
