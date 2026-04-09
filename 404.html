@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerraExplorer — 404 Not Found</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:#060a14;overflow:hidden;height:100vh;width:100vw;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    color:#fff;
+  }
+
+  /* ---------- milky way ---------- */
+  .milkyway{
+    position:fixed;inset:0;z-index:0;overflow:hidden;
+  }
+
+  /* deep background glow — far layer (heavy blur = depth) */
+  .milkyway-deep{
+    position:absolute;
+    width:200%;height:50%;
+    top:26%;left:-50%;
+    transform:rotate(-28deg);
+    background:
+      radial-gradient(ellipse 40% 100% at 50% 50%,
+        rgba(180,160,220,.14) 0%,
+        rgba(120,100,160,.08) 30%,
+        rgba(80,60,120,.04) 60%,
+        transparent 100%);
+    filter:blur(40px);
+  }
+
+  /* main galactic band — mid layer */
+  .milkyway-band{
+    position:absolute;
+    width:200%;height:42%;
+    top:30%;left:-50%;
+    transform:rotate(-28deg);
+    background:
+      /* bright core */
+      radial-gradient(ellipse 25% 100% at 50% 50%,
+        rgba(230,210,170,.2) 0%,
+        rgba(200,180,140,.12) 20%,
+        rgba(160,140,120,.06) 50%,
+        transparent 80%),
+      /* wider haze */
+      radial-gradient(ellipse 50% 100% at 50% 50%,
+        rgba(160,150,190,.1) 0%,
+        rgba(120,110,160,.05) 40%,
+        transparent 100%),
+      /* warm core accent */
+      radial-gradient(ellipse 15% 60% at 48% 50%,
+        rgba(255,220,160,.08) 0%,
+        transparent 100%);
+    filter:blur(8px);
+  }
+
+  /* sharp star dust along the band — near layer (minimal blur) */
+  .milkyway-dust{
+    position:absolute;
+    width:200%;height:32%;
+    top:34%;left:-50%;
+    transform:rotate(-28deg);
+    filter:blur(0.4px);
+  }
+
+  /* secondary dust — mid-depth */
+  .milkyway-dust2{
+    position:absolute;
+    width:200%;height:36%;
+    top:32%;left:-50%;
+    transform:rotate(-28deg);
+    filter:blur(2px);
+  }
+
+  /* nebula color patches */
+  .milkyway-nebula{
+    position:absolute;border-radius:50%;opacity:0;
+    animation:nebula-drift var(--dur) ease-in-out infinite alternate;
+  }
+  .milkyway-nebula.sharp{filter:blur(18px)}
+  .milkyway-nebula.mid{filter:blur(35px)}
+  .milkyway-nebula.deep{filter:blur(55px)}
+  @keyframes nebula-drift{
+    0%{opacity:var(--lo);transform:translate(0,0) scale(1)}
+    100%{opacity:var(--hi);transform:translate(var(--dx),var(--dy)) scale(var(--sc))}
+  }
+
+  /* dark rifts (dust lanes) */
+  .milkyway-rift{
+    position:absolute;
+    width:200%;height:6%;
+    top:48%;left:-50%;
+    transform:rotate(-28deg);
+    background:linear-gradient(90deg,
+      transparent 5%,
+      rgba(0,0,0,.2) 20%,
+      rgba(0,0,0,.35) 38%,
+      rgba(0,0,0,.3) 52%,
+      rgba(0,0,0,.15) 68%,
+      transparent 90%);
+    filter:blur(6px);
+  }
+  .milkyway-rift2{
+    position:absolute;
+    width:200%;height:4%;
+    top:44%;left:-50%;
+    transform:rotate(-28deg);
+    background:linear-gradient(90deg,
+      transparent 15%,
+      rgba(0,0,0,.12) 30%,
+      rgba(0,0,0,.2) 45%,
+      rgba(0,0,0,.1) 60%,
+      transparent 80%);
+    filter:blur(10px);
+  }
+
+  /* ---------- stars ---------- */
+  .stars{position:fixed;inset:0;z-index:0}
+  .star{
+    position:absolute;border-radius:50%;
+    opacity:0;
+  }
+  /* spawn: fade in + grow, hold, then fade out + shrink, then removed by JS */
+  @keyframes star-life{
+    0%{opacity:0;transform:scale(0)}
+    15%{opacity:var(--peak);transform:scale(1.2)}
+    50%{opacity:var(--peak);transform:scale(1)}
+    85%{opacity:var(--peak,.5);transform:scale(1.1)}
+    100%{opacity:0;transform:scale(0)}
+  }
+  /* light ray burst */
+  .star::before,.star::after{
+    content:'';position:absolute;top:50%;left:50%;
+    background:inherit;border-radius:999px;opacity:.45;
+  }
+  .star::before{
+    width:200%;height:1px;transform:translate(-50%,-50%);
+  }
+  .star::after{
+    width:1px;height:200%;transform:translate(-50%,-50%);
+  }
+
+  /* ---------- solar system ---------- */
+  .scene{position:relative;width:clamp(280px,55vw,420px);height:clamp(280px,55vw,420px);z-index:1;margin-top:6vh}
+
+  /* sun */
+  .sun{
+    position:absolute;width:68px;height:68px;border-radius:50%;
+    background:radial-gradient(circle at 38% 38%,#fffbe6,#fff176 20%,#ffca28 45%,#ff9800 75%,#e65100 100%);
+    top:50%;left:50%;transform:translate(-50%,-50%);
+    box-shadow:0 0 30px 10px rgba(255,200,0,.5),0 0 60px 20px rgba(255,160,0,.25),0 0 120px 40px rgba(255,120,0,.08);
+    z-index:2;
+  }
+  /* inner shimmer */
+  .sun-pulse{
+    position:absolute;inset:-14px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,220,50,.22),transparent 65%);
+    animation:glow 3s ease-in-out infinite alternate;
+  }
+  @keyframes glow{0%{transform:scale(.92);opacity:.5}100%{transform:scale(1.18);opacity:1}}
+
+  /* sun corona — container for JS-spawned rays */
+  .sun-corona{
+    position:absolute;inset:0;border-radius:50%;z-index:-1;
+  }
+  .sun-ray{
+    position:absolute;top:50%;left:50%;
+    transform-origin:0 0;
+    background:linear-gradient(90deg,rgba(255,220,80,.35),transparent);
+    border-radius:0 50% 50% 0;
+    filter:blur(2px);
+    opacity:0;
+    animation:ray-life var(--dur) ease-in-out forwards;
+  }
+  @keyframes ray-life{
+    0%{opacity:0;transform:rotate(var(--angle)) scaleX(0)}
+    20%{opacity:var(--peak);transform:rotate(var(--angle)) scaleX(1)}
+    70%{opacity:var(--peak);transform:rotate(var(--angle)) scaleX(1.05)}
+    100%{opacity:0;transform:rotate(var(--angle)) scaleX(0)}
+  }
+
+  /* pulsating light rings — JS spawned */
+  .sun-ring-live{
+    position:absolute;inset:0;border-radius:50%;
+    border:1.5px solid rgba(255,220,80,.15);
+    opacity:0;
+    animation:ring-expand var(--dur) ease-out forwards;
+  }
+  @keyframes ring-expand{
+    0%{transform:scale(1);opacity:.4}
+    100%{transform:scale(var(--scale));opacity:0}
+  }
+
+  /* earth orbit */
+  .earth-orbit{
+    position:absolute;width:260px;height:260px;
+    top:50%;left:50%;transform:translate(-50%,-50%);
+    border:1px solid rgba(255,255,255,.06);border-radius:50%;
+    animation:spin 20s linear infinite;
+    z-index:3;
+  }
+  @keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+
+  /* earth */
+  .earth{
+    position:absolute;width:52px;height:52px;border-radius:50%;
+    top:-26px;left:50%;transform:translateX(-50%);
+    background:radial-gradient(circle at 35% 30%,#83E1ED 0%,#3A96B9 60%,#2E85A7 100%);
+    box-shadow:
+      inset -10px -8px 20px rgba(0,0,0,0.3),
+      0 0 20px rgba(58,150,185,0.4),
+      0 0 50px rgba(58,150,185,0.15);
+    z-index:4;
+    animation:counter-spin 20s linear infinite;
+    overflow:hidden;
+  }
+  @keyframes counter-spin{to{transform:translateX(-50%) rotate(-360deg)}}
+
+  /* continents — box-shadow blobs, same as splash */
+  .earth::before{
+    content:'';
+    position:absolute;
+    top:12%;left:15%;
+    width:15px;height:11px;
+    background:#85DA71;
+    border-radius:40% 60% 50% 40%;
+    box-shadow:
+      13px 8px 0 3px #85DA71,
+      -3px 20px 0 4px #6AB25C,
+      15px 23px 0 2px #85DA71,
+      5px 30px 0 5px #6AB25C;
+  }
+
+  /* dark water at bottom */
+  .earth::after{
+    content:'';
+    position:absolute;
+    bottom:0;left:0;
+    width:100%;height:45%;
+    background:rgba(46,133,167,0.4);
+    border-radius:0 0 50% 50%;
+  }
+
+  /* moon orbit (relative to earth) */
+  .moon-orbit{
+    position:absolute;width:90px;height:90px;
+    top:-45px;left:50%;transform:translateX(-50%);
+    animation:counter-spin 20s linear infinite;
+    z-index:5;
+  }
+  .moon-orbit-inner{
+    width:100%;height:100%;
+    animation:spin-moon 4s linear infinite;
+    position:relative;
+  }
+  @keyframes spin-moon{to{transform:rotate(360deg)}}
+
+  /* moon */
+  .moon{
+    position:absolute;width:12px;height:12px;border-radius:50%;
+    top:-6px;left:50%;transform:translateX(-50%);
+    background:radial-gradient(circle at 40% 35%,#f0f0e8,#c8c8b8 60%,#999 90%);
+    box-shadow:inset -3px -2px 4px rgba(0,0,0,.35),0 0 6px 1px rgba(240,240,232,.15);
+    animation:counter-moon 4s linear infinite;
+  }
+  @keyframes counter-moon{to{transform:translateX(-50%) rotate(-360deg)}}
+
+  /* craters */
+  .moon::before{
+    content:'';position:absolute;width:3px;height:3px;border-radius:50%;
+    background:rgba(0,0,0,.12);top:3px;left:2px;
+    box-shadow:4px 3px 0 1px rgba(0,0,0,.08);
+  }
+
+  /* ---------- text ---------- */
+  .text-block{
+    position:fixed;top:3%;left:0;right:0;text-align:center;z-index:10;
+  }
+  .four04{
+    font-size:clamp(2.8rem,9vw,5.5rem);font-weight:800;letter-spacing:.04em;
+    background:linear-gradient(135deg,#6C63FF,#48c6ef);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    background-clip:text;
+    line-height:1;
+  }
+  .subtitle{
+    font-size:clamp(.75rem,2vw,1.05rem);opacity:.55;margin-top:.25em;
+    font-weight:400;letter-spacing:.06em;
+  }
+  .home-link{
+    display:inline-block;margin-top:1em;padding:.5em 1.4em;
+    border:1px solid rgba(108,99,255,.5);border-radius:2em;
+    color:#a8a3ff;font-size:.85rem;text-decoration:none;
+    transition:background .25s,color .25s,box-shadow .25s;
+    backdrop-filter:blur(6px);background:rgba(108,99,255,.08);
+  }
+  .home-link:hover{
+    background:rgba(108,99,255,.22);color:#fff;
+    box-shadow:0 0 18px rgba(108,99,255,.3);
+  }
+
+  /* ---------- mobile ---------- */
+  @media (max-width:480px){
+    .scene{
+      width:clamp(180px,65vw,260px);height:clamp(180px,65vw,260px);
+      margin-top:3vh;
+    }
+    .sun{width:44px;height:44px;
+      box-shadow:0 0 20px 8px rgba(255,200,0,.45),0 0 40px 14px rgba(255,160,0,.2),0 0 80px 28px rgba(255,120,0,.06);
+    }
+    .sun-pulse{inset:-10px}
+    .earth-orbit{width:170px;height:170px}
+    .earth{width:36px;height:36px;top:-18px}
+    .earth::before{width:10px;height:7px;
+      box-shadow:9px 5px 0 2px #85DA71,-2px 13px 0 3px #6AB25C,10px 15px 0 1px #85DA71,3px 20px 0 3px #6AB25C;
+    }
+    .moon-orbit{width:62px;height:62px;top:-31px}
+    .moon{width:9px;height:9px;top:-4px}
+    .moon::before{width:2px;height:2px;top:2px;left:1px;box-shadow:3px 2px 0 .5px rgba(0,0,0,.08)}
+    .text-block{top:2%}
+    .four04{font-size:clamp(2rem,11vw,3.2rem)}
+    .subtitle{font-size:clamp(.65rem,2.5vw,.85rem)}
+    .home-link{padding:.4em 1.1em;font-size:.78rem}
+  }
+
+  /* very small phones */
+  @media (max-width:360px){
+    .scene{width:160px;height:160px}
+    .sun{width:36px;height:36px}
+    .sun-pulse{inset:-8px}
+    .earth-orbit{width:140px;height:140px}
+    .earth{width:30px;height:30px;top:-15px}
+    .earth::before{width:8px;height:6px;
+      box-shadow:7px 4px 0 1.5px #85DA71,-1px 10px 0 2px #6AB25C,8px 12px 0 1px #85DA71,2px 16px 0 2px #6AB25C;
+    }
+    .moon-orbit{width:50px;height:50px;top:-25px}
+    .moon{width:7px;height:7px;top:-3px}
+  }
+
+  /* landscape on mobile (short viewport) */
+  @media (max-height:500px){
+    .text-block{top:1%;display:flex;flex-direction:column;align-items:center;gap:2px}
+    .four04{font-size:clamp(1.6rem,6vh,2.5rem)}
+    .subtitle{margin-top:0;font-size:clamp(.6rem,1.6vh,.8rem)}
+    .home-link{margin-top:.3em;padding:.3em .9em;font-size:.72rem}
+    .scene{width:clamp(130px,35vh,220px);height:clamp(130px,35vh,220px);margin-top:1vh}
+    .sun{width:36px;height:36px}
+    .sun-pulse{inset:-8px}
+    .earth-orbit{width:140px;height:140px}
+    .earth{width:30px;height:30px;top:-15px}
+    .earth::before{width:8px;height:6px;
+      box-shadow:7px 4px 0 1.5px #85DA71,-1px 10px 0 2px #6AB25C,8px 12px 0 1px #85DA71,2px 16px 0 2px #6AB25C;
+    }
+    .moon-orbit{width:50px;height:50px;top:-25px}
+    .moon{width:7px;height:7px;top:-3px}
+  }
+
+  /* landscape ultra-short (e.g. small phone rotated) */
+  @media (max-height:380px){
+    .scene{width:clamp(100px,28vh,160px);height:clamp(100px,28vh,160px)}
+    .sun{width:28px;height:28px}
+    .sun-pulse{inset:-6px}
+    .earth-orbit{width:110px;height:110px}
+    .earth{width:24px;height:24px;top:-12px}
+    .moon-orbit{width:40px;height:40px;top:-20px}
+    .moon{width:6px;height:6px;top:-3px}
+    .four04{font-size:clamp(1.2rem,5vh,2rem)}
+  }
+</style>
+</head>
+<body>
+
+<!-- milky way -->
+<div class="milkyway">
+  <div class="milkyway-deep"></div>
+  <div class="milkyway-band"></div>
+  <div class="milkyway-rift"></div>
+  <div class="milkyway-rift2"></div>
+  <div class="milkyway-dust2" id="milkywayDust2"></div>
+  <div class="milkyway-dust" id="milkywayDust"></div>
+  <!-- deep nebulae (far, heavy blur) -->
+  <div class="milkyway-nebula deep" style="width:350px;height:200px;top:25%;left:5%;background:radial-gradient(circle,rgba(80,50,160,.18),transparent);--dur:16s;--lo:.08;--hi:.18;--dx:20px;--dy:10px;--sc:1.12"></div>
+  <div class="milkyway-nebula deep" style="width:300px;height:180px;top:38%;left:50%;background:radial-gradient(circle,rgba(160,60,60,.14),transparent);--dur:20s;--lo:.06;--hi:.15;--dx:-15px;--dy:15px;--sc:1.18"></div>
+  <div class="milkyway-nebula deep" style="width:400px;height:220px;top:30%;left:25%;background:radial-gradient(circle,rgba(40,80,160,.12),transparent);--dur:22s;--lo:.05;--hi:.13;--dx:12px;--dy:-8px;--sc:1.1"></div>
+  <!-- mid nebulae -->
+  <div class="milkyway-nebula mid" style="width:220px;height:130px;top:32%;left:12%;background:radial-gradient(circle,rgba(120,60,180,.16),transparent);--dur:12s;--lo:.06;--hi:.16;--dx:15px;--dy:8px;--sc:1.1"></div>
+  <div class="milkyway-nebula mid" style="width:200px;height:110px;top:42%;left:58%;background:radial-gradient(circle,rgba(200,80,80,.12),transparent);--dur:15s;--lo:.05;--hi:.13;--dx:-10px;--dy:12px;--sc:1.15"></div>
+  <div class="milkyway-nebula mid" style="width:280px;height:150px;top:36%;left:32%;background:radial-gradient(circle,rgba(60,120,200,.1),transparent);--dur:18s;--lo:.04;--hi:.12;--dx:8px;--dy:-6px;--sc:1.08"></div>
+  <div class="milkyway-nebula mid" style="width:160px;height:100px;top:48%;left:72%;background:radial-gradient(circle,rgba(140,180,80,.08),transparent);--dur:14s;--lo:.03;--hi:.1;--dx:-12px;--dy:5px;--sc:1.12"></div>
+  <!-- sharp nebulae (near, light blur) -->
+  <div class="milkyway-nebula sharp" style="width:140px;height:80px;top:38%;left:20%;background:radial-gradient(circle,rgba(160,100,220,.14),transparent);--dur:10s;--lo:.06;--hi:.14;--dx:8px;--dy:5px;--sc:1.06"></div>
+  <div class="milkyway-nebula sharp" style="width:120px;height:70px;top:44%;left:45%;background:radial-gradient(circle,rgba(220,120,90,.1),transparent);--dur:11s;--lo:.04;--hi:.12;--dx:-6px;--dy:8px;--sc:1.08"></div>
+  <div class="milkyway-nebula sharp" style="width:100px;height:60px;top:35%;left:65%;background:radial-gradient(circle,rgba(80,140,220,.12),transparent);--dur:13s;--lo:.05;--hi:.12;--dx:10px;--dy:-4px;--sc:1.05"></div>
+</div>
+
+<!-- stars injected by JS -->
+<div class="stars" id="stars"></div>
+
+<!-- solar system -->
+<div class="scene">
+  <div class="sun"><div class="sun-corona" id="sunCorona"></div><div class="sun-pulse"></div></div>
+  <div class="earth-orbit">
+    <div class="earth"></div>
+    <div class="moon-orbit">
+      <div class="moon-orbit-inner">
+        <div class="moon"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- text -->
+<div class="text-block">
+  <div class="four04">404</div>
+  <div class="subtitle">TerraExplorer — Page Not Found</div>
+  <a class="home-link" href="/">&#127758; Back to Earth</a>
+</div>
+
+<script>
+(function(){
+  /* ---- milky way star dust (sharp near-layer) ---- */
+  var dust=document.getElementById('milkywayDust');
+  var dustColors=['#fff','#ffe8c0','#c8d8ff','#ffd','#e0d0ff','#ffddc8'];
+  for(var d=0;d<500;d++){
+    var dot=document.createElement('div');
+    var sz=Math.random()*2+0.3;
+    var bright=0.2+Math.random()*0.6;
+    var cx=Math.random()*100;
+    // gaussian-ish clustering toward center
+    var cy=40+(Math.random()+Math.random()+Math.random()-1.5)*25;
+    dot.style.cssText=
+      'position:absolute;border-radius:50%;'+
+      'width:'+sz+'px;height:'+sz+'px;'+
+      'left:'+cx+'%;top:'+cy+'%;'+
+      'background:'+dustColors[Math.floor(Math.random()*dustColors.length)]+';'+
+      'opacity:'+bright+';';
+    dust.appendChild(dot);
+  }
+
+  /* ---- milky way star dust (blurred mid-layer) ---- */
+  var dust2=document.getElementById('milkywayDust2');
+  for(var d2=0;d2<200;d2++){
+    var dot2=document.createElement('div');
+    var sz2=Math.random()*3+1;
+    var bright2=0.08+Math.random()*0.25;
+    var cx2=Math.random()*100;
+    var cy2=35+(Math.random()+Math.random()-1)*22;
+    dot2.style.cssText=
+      'position:absolute;border-radius:50%;'+
+      'width:'+sz2+'px;height:'+sz2+'px;'+
+      'left:'+cx2+'%;top:'+cy2+'%;'+
+      'background:'+dustColors[Math.floor(Math.random()*dustColors.length)]+';'+
+      'opacity:'+bright2+';';
+    dust2.appendChild(dot2);
+  }
+
+  /* ---- dynamic stars ---- */
+  var container=document.getElementById('stars');
+  var colors=['#fff','#c8deff','#aaddff','#ffd','#fcc','#e8e0ff'];
+  var MAX=120,count=0;
+  function spawnStar(){
+    var s=document.createElement('div');
+    s.className='star';
+    var size=Math.random()*3+1;
+    var life=(3+Math.random()*5);
+    var peak=(0.4+Math.random()*0.6);
+    var color=colors[Math.floor(Math.random()*colors.length)];
+    s.style.cssText=
+      'width:'+size+'px;height:'+size+'px;'+
+      'top:'+Math.random()*100+'%;left:'+Math.random()*100+'%;'+
+      'background:'+color+';'+
+      '--peak:'+peak+';'+
+      'animation:star-life '+life+'s ease-in-out forwards;';
+    container.appendChild(s);
+    count++;
+    setTimeout(function(){ s.remove(); count--; }, life*1000);
+  }
+  for(var i=0;i<80;i++) setTimeout(spawnStar, Math.random()*2000);
+  setInterval(function(){ if(count<MAX) spawnStar(); }, 60);
+
+  /* ---- dynamic sun rays ---- */
+  var corona=document.getElementById('sunCorona');
+  function spawnRay(){
+    var r=document.createElement('div');
+    r.className='sun-ray';
+    var angle=Math.random()*360;
+    var len=20+Math.random()*30;
+    var h=1+Math.random()*2.5;
+    var dur=1.5+Math.random()*3;
+    var peak=0.15+Math.random()*0.3;
+    r.style.cssText=
+      'width:'+len+'px;height:'+h+'px;'+
+      '--angle:'+angle+'deg;--dur:'+dur+'s;--peak:'+peak+';'+
+      'animation:ray-life '+dur+'s ease-in-out forwards;';
+    corona.appendChild(r);
+    setTimeout(function(){ r.remove(); }, dur*1000);
+  }
+  setInterval(function(){
+    var batch=1+Math.floor(Math.random()*3);
+    for(var j=0;j<batch;j++) spawnRay();
+  }, 200);
+
+  /* ---- dynamic sun light rings ---- */
+  var sunEl=document.querySelector('.sun');
+  function spawnRing(){
+    var ring=document.createElement('div');
+    ring.className='sun-ring-live';
+    var dur=2+Math.random()*3;
+    var scale=1.4+Math.random()*0.8;
+    ring.style.cssText='--dur:'+dur+'s;--scale:'+scale+';';
+    sunEl.appendChild(ring);
+    setTimeout(function(){ ring.remove(); }, dur*1000);
+  }
+  setInterval(spawnRing, 2500);
+  spawnRing();
+})();
+</script>
+</body>
+</html>
