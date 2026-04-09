@@ -1718,6 +1718,8 @@
       // --- Country Images ---
       var _allCountryPhotos = [];
       var _currentImgCountry = '';
+      var _imgPage = 1;
+      var _imgTotalPages = 1;
 
       function showPhotosInGrid(photos, countryName) {
         var grid = document.getElementById('countryImagesGrid');
@@ -1744,15 +1746,22 @@
           return;
         }
         _currentImgCountry = countryName;
+        _imgPage = 1;
+        _imgTotalPages = 1;
+        _fetchUnsplashPage(countryName, 1, grid);
+      }
+
+      function _fetchUnsplashPage(countryName, page, grid) {
         grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.5;font-size:0.8rem">Loading photos...</span>';
 
         var url = 'https://api.unsplash.com/search/photos?query=' +
-          encodeURIComponent(countryName + ' landmarks tourism') +
-          '&per_page=20&orientation=landscape&client_id=' + UNSPLASH_ACCESS_KEY;
+          encodeURIComponent(countryName) +
+          '&per_page=20&page=' + page + '&client_id=' + UNSPLASH_ACCESS_KEY;
 
         fetch(url)
           .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
           .then(function (data) {
+            _imgTotalPages = data.total_pages || 1;
             var results = data.results || [];
             if (results.length === 0) {
               grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.4;font-size:0.8rem">No photos found</span>';
@@ -1775,25 +1784,10 @@
 
       document.getElementById('refreshImagesBtn').addEventListener('click', function () {
         if (_currentImgCountry && UNSPLASH_ACCESS_KEY) {
-          // Fetch a new random page
-          var page = Math.floor(Math.random() * 5) + 1;
+          _imgPage++;
+          if (_imgPage > _imgTotalPages) _imgPage = 1;
           var grid = document.getElementById('countryImagesGrid');
-          grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.5;font-size:0.8rem">Loading photos...</span>';
-          var url = 'https://api.unsplash.com/search/photos?query=' +
-            encodeURIComponent(_currentImgCountry + ' landmarks tourism') +
-            '&per_page=20&orientation=landscape&page=' + page +
-            '&client_id=' + UNSPLASH_ACCESS_KEY;
-          fetch(url)
-            .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
-            .then(function (data) {
-              var results = data.results || [];
-              if (results.length === 0) { return; }
-              _allCountryPhotos = results.map(function (r) {
-                return { small: r.urls.small, regular: r.urls.regular, alt: r.alt_description || _currentImgCountry };
-              });
-              showPhotosInGrid(_allCountryPhotos, _currentImgCountry);
-            })
-            .catch(function () {});
+          _fetchUnsplashPage(_currentImgCountry, _imgPage, grid);
         }
       });
 
