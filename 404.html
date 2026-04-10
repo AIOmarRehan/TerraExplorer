@@ -166,7 +166,11 @@
   }
 
   /* ---------- solar system ---------- */
-  .scene{position:relative;width:clamp(280px,55vw,420px);height:clamp(280px,55vw,420px);z-index:1;margin-top:6vh}
+  .scene{
+    position:fixed;z-index:1;
+    width:clamp(280px,55vw,420px);height:clamp(280px,55vw,420px);
+    top:50%;left:50%;transform:translate(-50%,-50%);
+  }
 
   /* sun */
   .sun{
@@ -344,7 +348,6 @@
   @media (max-width:480px){
     .scene{
       width:clamp(180px,65vw,260px);height:clamp(180px,65vw,260px);
-      margin-top:3vh;
     }
     .sun{width:44px;height:44px;
       box-shadow:0 0 20px 8px rgba(255,200,0,.45),0 0 40px 14px rgba(255,160,0,.2),0 0 80px 28px rgba(255,120,0,.06);
@@ -384,7 +387,7 @@
     .four04{font-size:clamp(1.6rem,6vh,2.5rem)}
     .subtitle{margin-top:0;font-size:clamp(.6rem,1.6vh,.8rem)}
     .home-link{margin-top:.3em;padding:.3em .9em;font-size:.72rem}
-    .scene{width:clamp(130px,35vh,220px);height:clamp(130px,35vh,220px);margin-top:1vh}
+    .scene{width:clamp(130px,35vh,220px);height:clamp(130px,35vh,220px)}
     .sun{width:36px;height:36px}
     .sun-pulse{inset:-8px}
     .earth-orbit{width:140px;height:140px}
@@ -454,7 +457,7 @@
 <div class="text-block">
   <div class="four04">404</div>
   <div class="subtitle">TerraExplorer — Page Not Found</div>
-  <a class="home-link" href="/">&#127758; Back to Earth</a>
+  <a class="home-link" href="index.html">&#127758; Back to Earth</a>
 </div>
 
 <script>
