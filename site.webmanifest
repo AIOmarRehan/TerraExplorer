@@ -1,0 +1,21 @@
+{
+  "name": "TerraExplorer",
+  "short_name": "TerraExplorer",
+  "description": "Explore countries, discover cultures, and learn about the world.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0e2b",
+  "theme_color": "#6C63FF",
+  "icons": [
+    {
+      "src": "/favicon/Android Chrome/icons8-earth-color-72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon/Android Chrome/icons8-earth-color-96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    }
+  ]
+}
