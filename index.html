@@ -1692,6 +1692,22 @@
       .geo-toast-title { font-size: 0.84rem; }
       .geo-toast-cta { font-size: 0.72rem; }
     }
+    .passport-block {
+      display: flex; align-items: center; gap: 1rem;
+      background: rgba(108, 99, 255, 0.18);
+      border: 1px solid rgba(108, 99, 255, 0.3);
+      border-radius: 12px; padding: 0.9rem; margin: 0 0 1rem;
+      text-align: left;
+    }
+    .passport-photo {
+      flex-shrink: 0; width: 104px; aspect-ratio: 88 / 125; object-fit: contain;
+      border-radius: 7px; background: rgba(0, 0, 0, 0.12);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    }
+    .passport-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+    .passport-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.75; margin-bottom: 0.25rem; color: var(--text-on-card); }
+    .passport-rank { font-size: 0.88rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--text-on-card); }
+    .passport-fact { font-size: 0.8rem; opacity: 0.9; line-height: 1.5; color: var(--text-on-card); }
   </style>
 </head>
 <body>
@@ -1939,6 +1955,14 @@
             <div class="info-value" id="languagesText">--</div>
           </div>
         </div>
+        <div class="passport-block" id="passportBlock" style="display:none;">
+          <img class="passport-photo" id="passportPhoto" src="" alt="Passport" />
+          <div class="passport-meta">
+            <div class="passport-title">Passport Power</div>
+            <div class="passport-rank" id="passportText"></div>
+            <div class="passport-fact" id="passportFact"></div>
+          </div>
+        </div>
         <div class="country-images" id="countryImages">
           <div class="country-images-header">
             <div class="country-images-title">Snapshots</div>
@@ -2009,10 +2033,11 @@
   <!-- Footer -->
   <footer class="site-footer">
     <span>&copy; 2026 TerraExplorer &mdash; Made by Omar Rehan</span>
-    <span>Built with <a href="https://restcountries.com/" target="_blank" rel="noopener">RestCountries API</a> &amp; <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Gemini AI</a></span>
+    <span>Built with <a href="https://github.com/mledoze/countries" target="_blank" rel="noopener">open country data</a> &amp; <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Gemini AI</a></span>
   </footer>
 
   <script src="config.js"></script>
+  <script src="countries-data.js"></script>
   <script>
     (function () {
       // --- Splash Screen ---
@@ -2092,6 +2117,39 @@
       const flaggedBadge = document.getElementById('flaggedBadge');
       const currencyText = document.getElementById('currencyText');
       const languagesText = document.getElementById('languagesText');
+      const passportBlock = document.getElementById('passportBlock');
+      const passportPhoto = document.getElementById('passportPhoto');
+      const passportText = document.getElementById('passportText');
+      const passportFact = document.getElementById('passportFact');
+
+      // Passport helpers (embedded — no AI)
+      var _regionRankCache = null;
+      function regionRankFor(country) {
+        if (!_regionRankCache) {
+          _regionRankCache = {};
+          var byRegion = {};
+          (countriesCache || []).forEach(function (c) {
+            if (c.passport && c.passport.rank) (byRegion[c.region] = byRegion[c.region] || []).push(c);
+          });
+          Object.keys(byRegion).forEach(function (region) {
+            var arr = byRegion[region].slice().sort(function (a, b) { return b.passport.visaFree - a.passport.visaFree; });
+            var lastVf = null, lastRank = 0;
+            arr.forEach(function (c, i) {
+              var rank = (c.passport.visaFree === lastVf) ? lastRank : (i + 1);
+              lastVf = c.passport.visaFree; lastRank = rank;
+              _regionRankCache[c.cca3] = rank;
+            });
+          });
+        }
+        return _regionRankCache[country.cca3] || null;
+      }
+      function passportFactText(country) {
+        var p = country.passport, region = country.region || 'its region';
+        var rr = regionRankFor(country);
+        var parts = ['Ranked #' + p.rank + ' worldwide'];
+        if (rr) parts.push(rr === 1 ? ('the strongest passport in ' + region) : ('#' + rr + ' in ' + region));
+        return parts.join(' and ') + ', it opens ' + p.visaFree + ' destinations visa-free.';
+      }
       const mapFrame = document.getElementById('mapFrame');
       const regionFilter = document.getElementById('regionFilter');
       const historyPanel = document.getElementById('historyPanel');
@@ -2401,31 +2459,14 @@
         errorBanner.textContent = '';
       }
 
-      // --- RestCountries API ---
-      const API_FIELDS = 'fields=name,flags,population,region,subregion,capital,currencies,languages,latlng,ccn3';
+      // --- Country data (bundled locally; no live API needed) ---
       async function fetchAllCountries() {
         if (countriesCache) return countriesCache;
-        // Try /all first
-        try {
-          const resp = await fetch('https://restcountries.com/v3.1/all?' + API_FIELDS);
-          if (resp.ok) {
-            const data = await resp.json();
-            countriesCache = data;
-            return data;
-          }
-        } catch (e) { /* fall through to region fallback */ }
-        // Fallback: fetch all regions in parallel
-        const regions = ['africa', 'americas', 'asia', 'europe', 'oceania', 'antarctic'];
-        const promises = regions.map(r =>
-          fetch('https://restcountries.com/v3.1/region/' + r + '?' + API_FIELDS)
-            .then(res => res.ok ? res.json() : [])
-            .catch(() => [])
-        );
-        const results = await Promise.all(promises);
-        const all = results.flat();
-        if (all.length === 0) throw new Error('Could not load country data. Try again.');
-        countriesCache = all;
-        return all;
+        if (typeof COUNTRIES_DATA !== 'undefined' && Array.isArray(COUNTRIES_DATA) && COUNTRIES_DATA.length) {
+          countriesCache = COUNTRIES_DATA;
+          return countriesCache;
+        }
+        throw new Error('Country data failed to load. Make sure countries-data.js is present.');
       }
 
       function getRandomCountry(countries) {
@@ -2593,6 +2634,19 @@
           langStr = Object.values(country.languages).join(', ');
         }
         languagesText.textContent = langStr;
+
+        // Passport
+        var pp = country.passport;
+        if (pp && pp.rank) {
+          var lbl = pp.rank <= 10 ? 'Very strong' : pp.rank <= 25 ? 'Strong' : pp.rank <= 60 ? 'Moderate' : 'Limited';
+          var pimg = country.passportImage || (country.flags && (country.flags.png || country.flags.svg)) || '';
+          if (pimg) { passportPhoto.src = pimg; passportPhoto.style.display = ''; } else { passportPhoto.style.display = 'none'; }
+          passportText.textContent = 'Global rank #' + pp.rank + '  \u00b7  ' + pp.visaFree + ' destinations visa-free  \u00b7  ' + lbl;
+          passportFact.textContent = passportFactText(country);
+          passportBlock.style.display = '';
+        } else {
+          passportBlock.style.display = 'none';
+        }
 
         // Map
         if (country.latlng && country.latlng.length === 2) {

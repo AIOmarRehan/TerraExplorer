@@ -55,7 +55,7 @@ TerraExplorer is a zero-build, vanilla web app for discovering countries through
 ### Reliability
 
 - **Multi-Model AI Fallback** - cycles through 4 Gemini models on rate limits (429/503), auto-retries with countdown
-- **Region Fallback** - if `/all` endpoint fails, fetches countries by region in parallel
+- **Offline-Friendly Data** - all country data is bundled in `countries-data.js`, so flags, stats, maps and search work with no live API and no key
 - **Graceful Degradation** - works without any API key; AI and photos simply won't appear
 
 ## Getting Started
@@ -82,7 +82,7 @@ TerraExplorer is a zero-build, vanilla web app for discovering countries through
 | Markup | HTML5 (semantic) |
 | Styling | CSS3 - custom properties, flexbox, grid, glassmorphism, `backdrop-filter` |
 | Logic | Vanilla JavaScript (ES6+, async/await, Fetch API) |
-| Country Data | [RestCountries API v3.1](https://restcountries.com/) |
+| Country Data | Bundled locally (`countries-data.js`) — from [mledoze/countries](https://github.com/mledoze/countries), flags via [flagcdn](https://flagcdn.com/), population via [World Bank](https://data.worldbank.org/) |
 | AI | [Google Gemini API](https://ai.google.dev/) - multi-model fallback chain |
 | Photos | [Unsplash API](https://unsplash.com/developers) |
 | Maps (embed) | Google Maps embedded iframe |
@@ -99,6 +99,7 @@ TerraExplorer/
 ├── index.html          Explorer Mode (HTML + CSS + JS, single file)
 ├── map.html            Discover Mode - interactive world map
 ├── config.js           API keys (gitignored)
+├── countries-data.js   Bundled country dataset (names, flags, stats, coords)
 ├── earth-anim.json     Lottie animation data (header icon)
 ├── map-anim.json       Lottie animation data (map nav icon)
 ├── earth.lottie        Original .lottie source

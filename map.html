@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TerraExplorer — Discover Mode</title>
+  <title>TerraExplorer | Discover Mode</title>
   <!-- Favicons: Web browsers -->
   <link rel="icon" type="image/png" sizes="16x16" href="favicon/Web/icons8-earth-color-16.png" />
   <link rel="icon" type="image/png" sizes="32x32" href="favicon/Web/icons8-earth-color-32.png" />
@@ -49,7 +49,7 @@
       --radius: 16px;
       --shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
       --glass-blur: blur(16px);
-      --map-bg: #0e1a2e;
+      --map-bg: #12263d;
       --map-land: rgba(108, 99, 255, 0.25);
       --map-land-border: rgba(255, 255, 255, 0.35);
       --map-land-hover: rgba(108, 99, 255, 0.45);
@@ -64,7 +64,7 @@
       --text-muted-card: #475569;
       --border: rgba(0, 0, 0, 0.08);
       --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-      --map-bg: #e8f0fe;
+      --map-bg: #a6d4f2;
       --map-land: rgba(108, 99, 255, 0.15);
       --map-land-border: rgba(30, 41, 59, 0.3);
       --map-land-hover: rgba(108, 99, 255, 0.35);
@@ -291,7 +291,8 @@
     }
 
     /* Hide tooltips when detail panel is open */
-    body.panel-open .leaflet-tooltip {
+    body.panel-open .leaflet-tooltip,
+    body.map-dragging .leaflet-tooltip {
       opacity: 0 !important;
       pointer-events: none !important;
     }
@@ -946,6 +947,21 @@
       .detail-name { font-size: 1.05rem; }
       .info-grid { grid-template-columns: 1fr; gap: 0.4rem; }
     }
+    .passport-block {
+      display: flex; align-items: center; gap: 1rem;
+      background: rgba(108, 99, 255, 0.10);
+      border: 1px solid rgba(108, 99, 255, 0.22);
+      border-radius: 12px; padding: 0.9rem; margin-bottom: 1rem;
+    }
+    .passport-photo {
+      flex-shrink: 0; width: 104px; aspect-ratio: 88 / 125; object-fit: contain;
+      border-radius: 7px; background: rgba(0, 0, 0, 0.18);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    }
+    .passport-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+    .passport-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.7; margin-bottom: 0.25rem; }
+    .passport-rank { font-size: 0.88rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .passport-fact { font-size: 0.8rem; opacity: 0.9; line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -1000,6 +1016,14 @@
           <div class="info-value" id="detailLanguages">--</div>
         </div>
       </div>
+      <div class="passport-block" id="detailPassportBlock" style="display:none;">
+        <img class="passport-photo" id="detailPassportPhoto" src="" alt="Passport" />
+        <div class="passport-meta">
+          <div class="passport-title">Passport Power</div>
+          <div class="passport-rank" id="detailPassportText"></div>
+          <div class="passport-fact" id="detailPassportFact"></div>
+        </div>
+      </div>
       <div class="country-images" id="countryImages">
         <div class="country-images-header">
           <div class="country-images-title">Snapshots</div>
@@ -1030,12 +1054,14 @@
   </div>
 
   <script src="config.js"></script>
+  <script src="countries-data.js"></script>
   <script>
     (function () {
       'use strict';
 
       // --- Config ---
       const apiKey = (typeof GEMINI_API_KEY !== 'undefined' && GEMINI_API_KEY !== 'YOUR_API_KEY_HERE') ? GEMINI_API_KEY : '';
+      var isTouch = (window.L && L.Browser && L.Browser.touch) || ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
       let isDark = true;
       let countriesCache = null;
       let currentCountry = null;
@@ -1044,8 +1070,8 @@
 
       // --- Color palettes (direct values, no CSS variable lookups) ---
       var colors = {
-        dark: { land: '#2a2570', landBorder: '#5c5a8a', landHover: '#4a42b0', visited: '#1a6b3c' },
-        light: { land: '#c5bfff', landBorder: '#7a7aa0', landHover: '#9a90f0', visited: '#6fcf97' }
+        dark: { land: '#46557a', landBorder: '#243049', landHover: '#6a7cc4', visited: '#2f9558' },
+        light: { land: '#f0e9d6', landBorder: '#b3a98c', landHover: '#ffd27f', visited: '#84c98f' }
       };
 
       function getColors() { return isDark ? colors.dark : colors.light; }
@@ -1079,6 +1105,10 @@
       const detailPopulation = document.getElementById('detailPopulation');
       const detailCurrency = document.getElementById('detailCurrency');
       const detailLanguages = document.getElementById('detailLanguages');
+      const detailPassportBlock = document.getElementById('detailPassportBlock');
+      const detailPassportPhoto = document.getElementById('detailPassportPhoto');
+      const detailPassportText = document.getElementById('detailPassportText');
+      const detailPassportFact = document.getElementById('detailPassportFact');
       const detailMapFrame = document.getElementById('detailMapFrame');
 
       const aiLoading = document.getElementById('aiLoading');
@@ -1206,24 +1236,52 @@
       });
 
       // --- Leaflet Map ---
+      // Use a plate-carrée / equirectangular projection (EPSG:4326) instead of
+      // the default Web Mercator. Mercator cannot render latitudes beyond ±85°,
+      // which is what mangled Antarctica / the south pole. EPSG:4326 maps lon→x
+      // and lat→y linearly, so the whole world (-90..90) fits as a clean 2:1
+      // rectangle and country sizes look far more realistic.
       const map = L.map('map', {
-        center: [15, 0],
-        zoom: 3,
-        minZoom: 2,
+        crs: L.CRS.EPSG4326,
+        center: [20, 0],
+        zoom: 1,
+        minZoom: 0,
         maxZoom: 7,
         zoomControl: true,
-        renderer: L.svg(),
+        zoomSnap: 0,
+        renderer: L.svg({ padding: 0.5 }),
         worldCopyJump: false,
-        maxBounds: [[-90, -200], [90, 200]],
+        maxBounds: [[-95, -205], [95, 205]],
         maxBoundsViscosity: 1.0
       });
+
+      // While the mouse button is held (panning / sweeping), suppress hover
+      // highlights AND tooltips. We key off mousedown so it's active from the
+      // very first pixel of the drag, not only after the map starts moving.
+      var isDragging = false;
+      function beginDrag() {
+        isDragging = true;
+        document.body.classList.add('map-dragging');
+        if (geoLayer) geoLayer.eachLayer(function (l) { if (l.closeTooltip) l.closeTooltip(); });
+      }
+      function finishDrag() {
+        if (!isDragging) return;
+        isDragging = false;
+        document.body.classList.remove('map-dragging');
+        if (geoLayer) geoLayer.eachLayer(function (l) { if (l.closeTooltip) l.closeTooltip(); });
+      }
+      map.on('mousedown', beginDrag);
+      map.on('movestart', beginDrag);
+      map.on('moveend', finishDrag);
+      map.getContainer().addEventListener('mousedown', beginDrag);
+      document.addEventListener('mouseup', finishDrag);
 
       // No tile layer — plain colored background (cartoon style)
 
       // --- Styles (thinner borders to minimize seam artifacts) ---
       function defaultStyle() {
         var c = getColors();
-        return { weight: 0.5, color: c.landBorder, fillColor: c.land, fillOpacity: 1, opacity: 0.6 };
+        return { weight: 0.8, color: c.landBorder, fillColor: c.land, fillOpacity: 1, opacity: 0.9 };
       }
 
       function hoverStyle() {
@@ -1236,37 +1294,83 @@
         return { weight: 1.2, color: isDark ? '#2ecc71' : '#1a8a4a', fillColor: c.visited, fillOpacity: 1, opacity: 0.9 };
       }
 
-      // --- Antimeridian fix: Fiji & Russia cross the 180° line, causing lines across the map ---
-      function fixAntimeridian(geojson) {
-        geojson.features.forEach(function (feature) {
-          var geom = feature.geometry;
-          if (geom.type === 'Polygon') {
-            geom.coordinates = geom.coordinates.map(fixRing);
-          } else if (geom.type === 'MultiPolygon') {
-            geom.coordinates = geom.coordinates.map(function (poly) {
-              return poly.map(fixRing);
-            });
-          }
-        });
-        return geojson;
+      // Antarctica reaches the south pole, which in this projection flattens
+      // into a full-width line along the very bottom of the map. Drawing it
+      // without a border removes that stray line while keeping the landmass.
+      function antarcticaStyle() {
+        var c = getColors();
+        return { weight: 0, color: c.land, fillColor: c.land, fillOpacity: 1, opacity: 0 };
       }
 
-      function fixRing(ring) {
-        var hasHigh = false, hasLow = false;
+      // --- Dateline normalization ------------------------------------------
+      // Countries that straddle the 180° meridian (Fiji, Kiribati, New Zealand,
+      // USA/Aleutians, Russia/Chukotka, …) arrive with some islands at +179 and
+      // others at -179. On a flat map that scatters a single country's pieces to
+      // opposite edges. We "unwrap" every feature around a reference meridian
+      // (the centroid longitude of its LARGEST ring) so every part of a country
+      // stays within ±180° of that reference — i.e. contiguous and together.
+      //
+      // Antarctica (id 010) is left untouched: it genuinely encircles the pole
+      // and is authored as a band that spans the full width, so shifting it
+      // would only introduce a seam.
+      // Dateline-safe area + centroid longitude for a single ring. Longitudes
+      // are unwrapped relative to the ring's first vertex before the shoelace
+      // sum, so a ring that itself crosses 180° doesn't get a wildly inflated
+      // area (which would otherwise hijack the reference meridian, e.g. Fiji).
+      function ringStats(ring) {
+        if (ring.length < 3) return { area: 0, centerLon: ring.length ? ring[0][0] : 0 };
+        var ref = ring[0][0];
+        var xs = new Array(ring.length);
         for (var i = 0; i < ring.length; i++) {
-          if (ring[i][0] > 160) hasHigh = true;
-          if (ring[i][0] < -160) hasLow = true;
+          var x = ring[i][0];
+          while (x - ref > 180) x -= 360;
+          while (x - ref < -180) x += 360;
+          xs[i] = x;
         }
-        if (!(hasHigh && hasLow)) return ring;
-        // Shift negative longitudes to positive so polygon doesn't wrap
-        var shifted = ring.map(function (c) {
-          return c[0] < 0 ? [c[0] + 360, c[1]] : [c[0], c[1]];
+        var a = 0, sx = 0;
+        for (var k = 0, n = ring.length, j = n - 1; k < n; j = k++) {
+          a += (xs[j] * ring[k][1]) - (xs[k] * ring[j][1]);
+          sx += xs[k];
+        }
+        var center = sx / ring.length;
+        while (center > 180) center -= 360;
+        while (center < -180) center += 360;
+        return { area: Math.abs(a / 2), centerLon: center };
+      }
+
+      function eachRing(geom, fn) {
+        if (geom.type === 'Polygon') {
+          geom.coordinates.forEach(fn);
+        } else if (geom.type === 'MultiPolygon') {
+          geom.coordinates.forEach(function (poly) { poly.forEach(fn); });
+        }
+      }
+
+      // Reference meridian = centroid longitude of the country's largest ring
+      // (its main landmass), so outlying islands are unwrapped to sit beside it.
+      function referenceLon(geom) {
+        var bestCenter = 0, bestArea = -1;
+        eachRing(geom, function (ring) {
+          var st = ringStats(ring);
+          if (st.area > bestArea) { bestArea = st.area; bestCenter = st.centerLon; }
         });
-        // Check if the shifted ring spans too wide (e.g. Antarctica goes from 0 to 360)
-        var lons = shifted.map(function (c) { return c[0]; });
-        var span = Math.max.apply(null, lons) - Math.min.apply(null, lons);
-        if (span > 180) return ring; // Not a dateline crosser, just a wide polygon
-        return shifted;
+        return bestArea >= 0 ? bestCenter : 0;
+      }
+
+      function unwrapLongitudes(geojson) {
+        geojson.features.forEach(function (feature) {
+          if (feature.id === '010') return; // leave Antarctica as-is
+          var ref = referenceLon(feature.geometry);
+          eachRing(feature.geometry, function (ring) {
+            for (var i = 0; i < ring.length; i++) {
+              var lon = ring[i][0];
+              while (lon - ref > 180) lon -= 360;
+              while (lon - ref < -180) lon += 360;
+              ring[i][0] = lon;
+            }
+          });
+        });
+        return geojson;
       }
 
       // --- Load BOTH datasets before building the map ---
@@ -1283,7 +1387,7 @@
         });
 
       var apiPromise = fetchAllCountries().catch(function (err) {
-        console.error('RestCountries API failed:', err);
+        console.error('Country data failed:', err);
         return [];
       });
 
@@ -1292,8 +1396,8 @@
         var countries = results[1];
         var geojson = topojson.feature(topoData, topoData.objects.countries);
 
-        // Fix Fiji & Russia antimeridian crossing
-        fixAntimeridian(geojson);
+        // Keep each country's geometry contiguous across the 180° meridian
+        unwrapLongitudes(geojson);
 
         // Split MultiPolygons into individual Polygons so each island
         // gets its own SVG path and its own perfectly fitted flag pattern.
@@ -1318,22 +1422,28 @@
         // We'll collect layers by country key to group them after creation
         var countryGroups = {}; // key -> [layer, layer, ...]
 
+        // Resolve the country/territory a TopoJSON feature belongs to.
+        // Priority: numeric ISO code -> RestCountries name -> hardcoded
+        // territory table (keyed by the exact TopoJSON name). No geographic
+        // guessing, so ID-less features like "Indian Ocean Ter." and
+        // "Siachen Glacier" are never mislabeled as a neighbouring territory.
+        function resolveCountry(feature) {
+          var match = findCountryByNumeric(countries, feature.id);
+          var fname = feature.properties && feature.properties.name;
+          if (!match && fname) match = findCountryByName(countries, fname);
+          if (!match && fname && TERRITORY_BY_NAME[fname]) match = TERRITORY_BY_NAME[fname];
+          return match;
+        }
+
         geoLayer = L.geoJSON(geojson, {
           style: function (feature) {
-            var match = findCountryByNumeric(countries, feature.id);
+            if (feature.id === '010') return antarcticaStyle();
+            var match = resolveCountry(feature);
             if (match && isVisited(match.name.common)) return visitedStyle();
             return defaultStyle();
           },
           onEachFeature: function (feature, layer) {
-            var match = findCountryByNumeric(countries, feature.id);
-            // Fallback: match by name if numeric code didn't work
-            if (!match && feature.properties && feature.properties.name) {
-              match = findCountryByName(countries, feature.properties.name);
-            }
-            // Fallback: match unrecognized territories (empty IDs) by centroid
-            if (!match && (!feature.id || feature.id === '')) {
-              match = matchUnrecognized(feature);
-            }
+            var match = resolveCountry(feature);
             if (match) {
               layer._countryData = match;
             }
@@ -1348,8 +1458,11 @@
             }
             layer._featureId = feature.id;
 
-            // Group key: use country name if matched, else feature id
-            var groupKey = match ? match.name.common : (feature.id || Math.random().toString());
+            // Group key: country name if matched, else the feature's own name,
+            // else its id. This keeps each country's islands linked together
+            // (and keeps unmatched territories grouped with themselves only).
+            var groupKey = match ? match.name.common
+              : ((feature.properties && feature.properties.name) || feature.id || Math.random().toString());
             if (!countryGroups[groupKey]) countryGroups[groupKey] = [];
             countryGroups[groupKey].push(layer);
 
@@ -1367,8 +1480,53 @@
           });
         });
 
+        // Build proximity clusters WITHIN each country: a connected landmass and
+        // its nearby islets. Hovering / flying then targets just that cluster, so
+        // hovering mainland France no longer lights up French Guiana (South
+        // America) or Réunion/Mayotte (Indian Ocean) thousands of km away.
+        Object.keys(countryGroups).forEach(function (key) {
+          var group = countryGroups[key];
+          var items = group.map(function (l) {
+            var b = l.getBounds();
+            return { layer: l, s: b.getSouth(), n: b.getNorth(), w: b.getWest(), e: b.getEast(), parent: -1 };
+          });
+          function find(i) { while (items[i].parent !== -1) i = items[i].parent; return i; }
+          function union(a, b) { var ra = find(a), rb = find(b); if (ra !== rb) items[rb].parent = ra; }
+          var T = 5; // degrees: pieces within ~5° of each other are one cluster
+          for (var a = 0; a < items.length; a++) {
+            for (var b = a + 1; b < items.length; b++) {
+              var A = items[a], B = items[b];
+              var dx = Math.max(0, A.w - B.e, B.w - A.e);
+              var dy = Math.max(0, A.s - B.n, B.s - A.n);
+              if (dx * dx + dy * dy < T * T) union(a, b);
+            }
+          }
+          var clusters = {};
+          for (var i = 0; i < items.length; i++) {
+            var r = find(i);
+            (clusters[r] = clusters[r] || []).push(items[i].layer);
+          }
+          Object.keys(clusters).forEach(function (r) {
+            var cl = clusters[r];
+            cl.forEach(function (l) { l._cluster = cl; });
+          });
+        });
+
         updateStats();
         updateFlagCounter();
+
+        // Fill the page completely (cover-fit): pick the zoom at which the
+        // world fills the viewport with no empty letterbox bands, and lock that
+        // as the minimum zoom. Antarctica's over-stretched tip sits below this
+        // framing, so it's out of the default view. If the user arrived from
+        // Explorer with a target country, the fly-to below overrides this.
+        try {
+          var worldB = L.latLngBounds([[-56, -180], [82, 180]]);
+          map.setMinZoom(0);
+          var coverZoom = map.getBoundsZoom(worldB, true);
+          map.setView(worldB.getCenter(), coverZoom, { animate: false });
+          map.setMinZoom(coverZoom);
+        } catch (e) {}
 
         // Restore previously flagged countries from localStorage
         if (flaggedCountries.size > 0) {
@@ -1455,8 +1613,9 @@
 
             // Fly to bounds (slight delay ensures map is rendered)
             var grp = getGroup(targetLayer);
+            var cluster = getCluster(targetLayer);
             var bounds = L.latLngBounds([]);
-            grp.forEach(function (l) { bounds.extend(l.getBounds()); });
+            cluster.forEach(function (l) { bounds.extend(l.getBounds()); });
             setTimeout(function () {
               map.flyToBounds(bounds, { maxZoom: 5, duration: 0.8, padding: [50, 50] });
             }, 300);
@@ -1503,65 +1662,32 @@
         }) || null;
       }
 
-      // Hardcoded data for territories not in RestCountries API
-      // These have empty IDs in the TopoJSON (world-atlas 110m)
-      var UNRECOGNIZED_TERRITORIES = [
-        {
+      // Hardcoded data for disputed/partly-recognized territories that have no
+      // numeric ID in the TopoJSON. Keyed by the EXACT feature name used by
+      // world-atlas (Natural Earth), so they map only to their own polygon.
+      var TERRITORY_BY_NAME = {
+        'N. Cyprus': {
           name: { common: 'Northern Cyprus', official: 'Turkish Republic of Northern Cyprus' },
           flags: { svg: 'https://upload.wikimedia.org/wikipedia/commons/1/1e/Flag_of_the_Turkish_Republic_of_Northern_Cyprus.svg', png: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Flag_of_the_Turkish_Republic_of_Northern_Cyprus.svg/320px-Flag_of_the_Turkish_Republic_of_Northern_Cyprus.svg.png' },
           population: 326000, region: 'Europe', subregion: 'Southern Europe',
           capital: ['North Nicosia'], currencies: { TRY: { name: 'Turkish lira', symbol: '\u20ba' } },
           languages: { tur: 'Turkish' }, latlng: [35.2, 33.7], ccn3: 'NC1', cca3: 'NC1'
         },
-        {
+        'Somaliland': {
           name: { common: 'Somaliland', official: 'Republic of Somaliland' },
           flags: { svg: 'https://upload.wikimedia.org/wikipedia/commons/4/4d/Flag_of_Somaliland.svg', png: 'https://flagcdn.com/w320/so.png' },
           population: 5700000, region: 'Africa', subregion: 'Eastern Africa',
           capital: ['Hargeisa'], currencies: { SLS: { name: 'Somaliland shilling', symbol: 'Sl' } },
           languages: { som: 'Somali', ara: 'Arabic' }, latlng: [9.56, 44.06], ccn3: 'SL1', cca3: 'SL1'
         },
-        {
+        'Kosovo': {
           name: { common: 'Kosovo', official: 'Republic of Kosovo' },
           flags: { svg: 'https://flagcdn.com/xk.svg', png: 'https://flagcdn.com/w320/xk.png' },
           population: 1800000, region: 'Europe', subregion: 'Southeast Europe',
           capital: ['Pristina'], currencies: { EUR: { name: 'Euro', symbol: '\u20ac' } },
           languages: { sqi: 'Albanian', srp: 'Serbian' }, latlng: [42.6, 21.0], ccn3: 'XK1', cca3: 'XKX'
         }
-      ];
-
-      // Assign unrecognized territories to features with empty IDs based on centroid proximity
-      function matchUnrecognized(feature) {
-        // Compute rough centroid from the feature's coordinates
-        var coords = [];
-        var geom = feature.geometry;
-        if (geom.type === 'Polygon') {
-          coords = geom.coordinates[0];
-        } else if (geom.type === 'MultiPolygon') {
-          coords = geom.coordinates[0][0];
-        }
-        if (coords.length === 0) return null;
-        var sumLon = 0, sumLat = 0;
-        for (var i = 0; i < coords.length; i++) {
-          sumLon += coords[i][0];
-          sumLat += coords[i][1];
-        }
-        var cLon = sumLon / coords.length;
-        var cLat = sumLat / coords.length;
-
-        // Find nearest unrecognized territory
-        var best = null, bestDist = Infinity;
-        for (var j = 0; j < UNRECOGNIZED_TERRITORIES.length; j++) {
-          var t = UNRECOGNIZED_TERRITORIES[j];
-          var dLon = cLon - t.latlng[1];
-          var dLat = cLat - t.latlng[0];
-          var dist = dLon * dLon + dLat * dLat;
-          if (dist < bestDist) {
-            bestDist = dist;
-            best = t;
-          }
-        }
-        return best;
-      }
+      };
 
       // --- Highlight visited countries on map ---
       function highlightVisitedOnMap() {
@@ -1589,11 +1715,18 @@
         return layer._countryGroup || [layer];
       }
 
+      // Helper: get the local landmass cluster a layer belongs to
+      function getCluster(layer) {
+        return layer._cluster || getGroup(layer);
+      }
+
       // --- Mouse events ---
       function onMouseOver(e) {
         var layer = e.target;
-        var group = getGroup(layer);
-        // Skip if any part of this country is currently selected
+        if (isTouch || isDragging) return; // ignore hover while panning / on touch
+        if (layer._featureId === '010') return; // skip Antarctica (avoids pole line)
+        var group = getCluster(layer);
+        // Skip if any part of this cluster is currently selected
         if (group.indexOf(selectedLayer) !== -1) return;
         if (detailOverlay.classList.contains('open')) return;
         // Skip if this country already has a flag applied
@@ -1603,7 +1736,8 @@
 
       function onMouseOut(e) {
         var layer = e.target;
-        var group = getGroup(layer);
+        if (layer._featureId === '010') return; // skip Antarctica (avoids pole line)
+        var group = getCluster(layer);
         if (group.indexOf(selectedLayer) !== -1) return;
         // Skip if this country has a flag applied
         if (layer._flagPatternId) return;
@@ -1638,10 +1772,12 @@
         // Show detail panel
         showDetail(country);
 
-        // Fly to the full country bounds (union of all island bboxes)
+        // Fly to the clicked landmass cluster (not the whole country, so a
+        // click on mainland France doesn't zoom out to fit French Guiana too)
         var group = getGroup(layer);
+        var cluster = getCluster(layer);
         var bounds = L.latLngBounds([]);
-        group.forEach(function (l) { bounds.extend(l.getBounds()); });
+        cluster.forEach(function (l) { bounds.extend(l.getBounds()); });
         map.flyToBounds(bounds, { maxZoom: 5, duration: 0.8, padding: [50, 50] });
 
         // Fill each island with its own fitted flag pattern
@@ -1690,17 +1826,17 @@
         var pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
         pattern.setAttribute('id', patternId);
         pattern.setAttribute('patternUnits', 'objectBoundingBox');
+        pattern.setAttribute('patternContentUnits', 'objectBoundingBox');
         pattern.setAttribute('width', '1');
         pattern.setAttribute('height', '1');
-        pattern.setAttribute('viewBox', '0 0 600 400');
-        pattern.setAttribute('preserveAspectRatio', 'xMidYMid slice');
 
         var image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
         image.setAttributeNS('http://www.w3.org/1999/xlink', 'href', flagUrl);
+        image.setAttribute('href', flagUrl);
         image.setAttribute('x', '0');
         image.setAttribute('y', '0');
-        image.setAttribute('width', '600');
-        image.setAttribute('height', '400');
+        image.setAttribute('width', '1');
+        image.setAttribute('height', '1');
         image.setAttribute('preserveAspectRatio', 'none');
 
         pattern.appendChild(image);
@@ -1900,6 +2036,54 @@
         }
       });
 
+      // --- Passport strength ---
+      function passportLabel(rank) {
+        if (rank <= 10) return 'Very strong';
+        if (rank <= 25) return 'Strong';
+        if (rank <= 60) return 'Moderate';
+        return 'Limited';
+      }
+      function passportCoverColor(c) { return '#1b3a63'; }
+      // Rank of each passport WITHIN its region (dense rank by visa-free score)
+      var _regionRankCache = null;
+      function regionRankFor(country) {
+        if (!_regionRankCache) {
+          _regionRankCache = {};
+          var byRegion = {};
+          (countriesCache || []).forEach(function (c) {
+            if (c.passport && c.passport.rank) (byRegion[c.region] = byRegion[c.region] || []).push(c);
+          });
+          Object.keys(byRegion).forEach(function (region) {
+            var arr = byRegion[region].slice().sort(function (a, b) { return b.passport.visaFree - a.passport.visaFree; });
+            var lastVf = null, lastRank = 0;
+            arr.forEach(function (c, i) {
+              var rank = (c.passport.visaFree === lastVf) ? lastRank : (i + 1);
+              lastVf = c.passport.visaFree; lastRank = rank;
+              _regionRankCache[c.cca3] = rank;
+            });
+          });
+        }
+        return _regionRankCache[country.cca3] || null;
+      }
+      // A fact specific to THIS passport, derived from its real standing
+      function passportFactText(country) {
+        var p = country.passport, region = country.region || 'its region';
+        var rr = regionRankFor(country);
+        var parts = ['Ranked #' + p.rank + ' worldwide'];
+        if (rr) parts.push(rr === 1 ? ('the strongest passport in ' + region) : ('#' + rr + ' in ' + region));
+        return parts.join(' and ') + ', it opens ' + p.visaFree + ' destinations visa-free.';
+      }
+      function renderPassport(country) {
+        var p = country && country.passport;
+        if (!(p && p.rank)) { detailPassportBlock.style.display = 'none'; return; }
+        var img = country.passportImage || (country.flags && (country.flags.png || country.flags.svg)) || '';
+        if (img) { detailPassportPhoto.src = img; detailPassportPhoto.style.display = ''; }
+        else { detailPassportPhoto.style.display = 'none'; }
+        detailPassportText.textContent = 'Global rank #' + p.rank + '  \u00b7  ' + p.visaFree + ' destinations visa-free  \u00b7  ' + passportLabel(p.rank);
+        detailPassportFact.textContent = passportFactText(country);
+        detailPassportBlock.style.display = '';
+      }
+
       // --- Detail Panel ---
       function showDetail(country, skipAI) {
         // Flag image
@@ -1934,6 +2118,7 @@
         }
         detailLanguages.textContent = langStr;
 
+        renderPassport(country);
         // Map embed
         if (country.latlng && country.latlng.length === 2) {
           detailMapFrame.src = 'https://www.google.com/maps?q=' + country.latlng[0] + ',' + country.latlng[1] + '&z=5&output=embed';
@@ -2029,32 +2214,14 @@
         }
       });
 
-      // --- RestCountries API ---
-      var API_FIELDS = 'fields=name,flags,population,region,subregion,capital,currencies,languages,latlng,ccn3';
+      // --- Country data (bundled locally; no live API needed) ---
       async function fetchAllCountries() {
         if (countriesCache) return countriesCache;
-        // Try /all first
-        try {
-          var resp = await fetch('https://restcountries.com/v3.1/all?' + API_FIELDS);
-          if (resp.ok) {
-            var data = await resp.json();
-            countriesCache = data;
-            return data;
-          }
-        } catch (e) { /* fall through to region fallback */ }
-        // Fallback: fetch all regions in parallel
-        var regions = ['africa', 'americas', 'asia', 'europe', 'oceania', 'antarctic'];
-        var promises = regions.map(function (r) {
-          return fetch('https://restcountries.com/v3.1/region/' + r + '?' + API_FIELDS)
-            .then(function (res) { return res.ok ? res.json() : []; })
-            .catch(function () { return []; });
-        });
-        var results = await Promise.all(promises);
-        var all = [];
-        results.forEach(function (arr) { all = all.concat(arr); });
-        if (all.length === 0) throw new Error('Could not load country data.');
-        countriesCache = all;
-        return all;
+        if (typeof COUNTRIES_DATA !== 'undefined' && Array.isArray(COUNTRIES_DATA) && COUNTRIES_DATA.length) {
+          countriesCache = COUNTRIES_DATA;
+          return countriesCache;
+        }
+        throw new Error('Country data failed to load. Make sure countries-data.js is present.');
       }
 
       // --- Gemini AI ---
