@@ -2073,11 +2073,19 @@
         if (rr) parts.push(rr === 1 ? ('the strongest passport in ' + region) : ('#' + rr + ' in ' + region));
         return parts.join(' and ') + ', it opens ' + p.visaFree + ' destinations visa-free.';
       }
+      // Set image with an ordered fallback chain (passportindex -> wiki -> flag)
+      function setPassportImg(el, srcs) {
+        var arr = []; srcs.forEach(function (s) { if (s && arr.indexOf(s) === -1) arr.push(s); });
+        var i = 0;
+        el.onerror = function () { i++; if (i < arr.length) el.src = arr[i]; else el.onerror = null; };
+        if (arr.length) el.src = arr[0];
+      }
       function renderPassport(country) {
         var p = country && country.passport;
         if (!(p && p.rank)) { detailPassportBlock.style.display = 'none'; return; }
-        var img = country.passportImage || (country.flags && (country.flags.png || country.flags.svg)) || '';
-        if (img) { detailPassportPhoto.src = img; detailPassportPhoto.style.display = ''; }
+        var flag = (country.flags && (country.flags.png || country.flags.svg)) || '';
+        var srcs = [country.passportImage, country.passportImageAlt, flag];
+        if (srcs.some(Boolean)) { setPassportImg(detailPassportPhoto, srcs); detailPassportPhoto.style.display = ''; }
         else { detailPassportPhoto.style.display = 'none'; }
         detailPassportText.textContent = 'Global rank #' + p.rank + '  \u00b7  ' + p.visaFree + ' destinations visa-free  \u00b7  ' + passportLabel(p.rank);
         detailPassportFact.textContent = passportFactText(country);

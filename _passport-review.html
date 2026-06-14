@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Passport Image Review</title>
+<style>
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 20px; }
+  h1 { font-size: 1.2rem; }
+  .bar { position: sticky; top: 0; background: #0f172a; padding: 10px 0; border-bottom: 1px solid #334155; margin-bottom: 16px; z-index: 5; }
+  input { padding: 8px 12px; border-radius: 8px; border: 1px solid #475569; background: #1e293b; color: #fff; width: 260px; }
+  .stats { font-size: 0.85rem; color: #94a3b8; margin-left: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 10px; text-align: center; }
+  .card.noimg { border-color: #b91c1c; }
+  .card img { width: 120px; height: 168px; object-fit: contain; background: #0b1220; border-radius: 6px; }
+  .name { font-weight: 700; margin-top: 8px; font-size: 0.9rem; }
+  .meta { font-size: 0.68rem; color: #94a3b8; margin-top: 4px; word-break: break-all; }
+  .file { font-size: 0.68rem; color: #fbbf24; margin-top: 4px; word-break: break-all; }
+  .none { color: #f87171; font-size: 0.8rem; padding: 60px 0; }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <h1>Passport Image Review</h1>
+    <input id="search" placeholder="Filter by country name..." />
+    <span class="stats" id="stats"></span>
+  </div>
+  <div class="grid" id="grid"></div>
+
+  <script src="countries-data.js"></script>
+  <script>
+    var list = (typeof COUNTRIES_DATA !== 'undefined' ? COUNTRIES_DATA : [])
+      .filter(function (c) { return c.passport && c.passport.rank; })
+      .sort(function (a, b) { return a.name.common.localeCompare(b.name.common); });
+
+    var grid = document.getElementById('grid');
+    var stats = document.getElementById('stats');
+    var withImg = list.filter(function (c) { return c.passportImage; }).length;
+    stats.textContent = list.length + ' passports · ' + withImg + ' with image · ' + (list.length - withImg) + ' without';
+
+    function fileOf(url) {
+      if (!url) return '(no image)';
+      try { return decodeURIComponent(url.split('/').pop()); } catch (e) { return url.split('/').pop(); }
+    }
+
+    function render(filter) {
+      grid.innerHTML = '';
+      list.forEach(function (c) {
+        if (filter && c.name.common.toLowerCase().indexOf(filter) === -1) return;
+        var card = document.createElement('div');
+        card.className = 'card' + (c.passportImage ? '' : ' noimg');
+        var img = c.passportImage
+          ? '<img src="' + c.passportImage + '" alt="" loading="lazy" />'
+          : '<div class="none">NO IMAGE</div>';
+        card.innerHTML = img +
+          '<div class="name">' + c.name.common + '</div>' +
+          '<div class="meta">' + c.cca3 + '</div>' +
+          '<div class="file">' + fileOf(c.passportImage) + '</div>';
+        grid.appendChild(card);
+      });
+    }
+    render('');
+    document.getElementById('search').addEventListener('input', function (e) {
+      render(e.target.value.trim().toLowerCase());
+    });
+  </script>
+</body>
+</html>

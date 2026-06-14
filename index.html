@@ -2123,6 +2123,12 @@
       const passportFact = document.getElementById('passportFact');
 
       // Passport helpers (embedded — no AI)
+      function setPassportImg(el, srcs) {
+        var arr = []; srcs.forEach(function (s) { if (s && arr.indexOf(s) === -1) arr.push(s); });
+        var i = 0;
+        el.onerror = function () { i++; if (i < arr.length) el.src = arr[i]; else el.onerror = null; };
+        if (arr.length) el.src = arr[0];
+      }
       var _regionRankCache = null;
       function regionRankFor(country) {
         if (!_regionRankCache) {
@@ -2639,8 +2645,10 @@
         var pp = country.passport;
         if (pp && pp.rank) {
           var lbl = pp.rank <= 10 ? 'Very strong' : pp.rank <= 25 ? 'Strong' : pp.rank <= 60 ? 'Moderate' : 'Limited';
-          var pimg = country.passportImage || (country.flags && (country.flags.png || country.flags.svg)) || '';
-          if (pimg) { passportPhoto.src = pimg; passportPhoto.style.display = ''; } else { passportPhoto.style.display = 'none'; }
+          var pflag = (country.flags && (country.flags.png || country.flags.svg)) || '';
+          var psrcs = [country.passportImage, country.passportImageAlt, pflag];
+          if (psrcs.some(Boolean)) { setPassportImg(passportPhoto, psrcs); passportPhoto.style.display = ''; }
+          else { passportPhoto.style.display = 'none'; }
           passportText.textContent = 'Global rank #' + pp.rank + '  \u00b7  ' + pp.visaFree + ' destinations visa-free  \u00b7  ' + lbl;
           passportFact.textContent = passportFactText(country);
           passportBlock.style.display = '';
