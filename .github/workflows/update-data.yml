@@ -1,0 +1,57 @@
+name: Weekly data refresh & deploy
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # every Monday 06:00 UTC
+  workflow_dispatch:        # allow manual run from the Actions tab
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  refresh-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Rebuild country data
+        run: node scripts/build-data.mjs
+
+      - name: Commit data if it changed
+        run: |
+          if [ -n "$(git status --porcelain countries-data.js)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add countries-data.js
+            git commit -m "chore: weekly passport/country data refresh"
+            git push
+          else
+            echo "No data changes this week."
+          fi
+
+      - name: Inject API keys
+        run: |
+          echo "const GEMINI_API_KEY = '${{ secrets.GEMINI_API_KEY }}';" > config.js
+          echo "const UNSPLASH_ACCESS_KEY = '${{ secrets.UNSPLASH_ACCESS_KEY }}';" >> config.js
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
