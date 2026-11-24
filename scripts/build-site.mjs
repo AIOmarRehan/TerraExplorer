@@ -21,13 +21,34 @@ const FILES = [
 
 const DIRECTORIES = ['favicon'];
 
+
 const LEGACY_SHIM = `/*
- * Legacy compatibility shim for the old public config.js URL.
- * This file is intentionally public and contains no credentials.
- * New pages load config.public.js instead.
+ *  TERRAEXPLORER SECURITY SYSTEM v2.0
+ *
+ *  OH! LOOK WHO'S HERE!
+ *
+ *  Trying to steal my Gemini API key?
+ *  Looking for my Unsplash credentials?
+ *
+ *  HAHAHA HABIBI, NOOOOO!
+ *
+ *  Nice try, hacker! You found the decoy.
+ *
+ *  My real API keys are safely stored inside
+ *  my Cloudflare Worker. Not in your browser!
+ *
+ *  Frontend secrets? NEVER, HABIBI.
+ *
+ *  I'M A GOOD AND EXPERIENCED SWE!
+ *
+ *  Now go explore the world instead.
+ *  Nothing to steal here, Sherlock!
  */
+
 var GEMINI_API_KEY = '';
 var UNSPLASH_ACCESS_KEY = '';
+
+// All API requests are handled by the Cloudflare Worker.
 `;
 
 function fail(message) {
