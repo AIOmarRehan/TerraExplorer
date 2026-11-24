@@ -1,0 +1,4 @@
+# Local Worker secrets for `npx wrangler@4 dev`.
+# Copy this file to `.dev.vars`, fill in local-only values, and never commit it.
+GEMINI_API_KEY=replace-with-a-local-gemini-key
+UNSPLASH_ACCESS_KEY=replace-with-a-local-unsplash-access-key

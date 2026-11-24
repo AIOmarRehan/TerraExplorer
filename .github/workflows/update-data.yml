@@ -1,4 +1,4 @@
-name: Weekly data refresh & deploy
+name: Weekly data refresh
 
 on:
   schedule:
@@ -6,31 +6,34 @@ on:
   workflow_dispatch:        # allow manual run from the Actions tab
 
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
 
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: data-refresh
+  cancel-in-progress: false
 
 jobs:
-  refresh-deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  refresh:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write   # commit the refreshed countries-data.js
+      actions: write    # start the Deploy to GitHub Pages workflow
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Rebuild country data
         run: node scripts/build-data.mjs
 
+      - name: Validate data file
+        run: node --check countries-data.js
+
       - name: Commit data if it changed
+        id: commit
         run: |
           if [ -n "$(git status --porcelain countries-data.js)" ]; then
             git config user.name "github-actions[bot]"
@@ -38,20 +41,17 @@ jobs:
             git add countries-data.js
             git commit -m "chore: weekly passport/country data refresh"
             git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "No data changes this week."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Inject API keys
-        run: |
-          echo "const GEMINI_API_KEY = '${{ secrets.GEMINI_API_KEY }}';" > config.js
-          echo "const UNSPLASH_ACCESS_KEY = '${{ secrets.UNSPLASH_ACCESS_KEY }}';" >> config.js
-
-      - uses: actions/configure-pages@v5
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
-
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      # Pushes made with GITHUB_TOKEN do not trigger push workflows, but a
+      # workflow_dispatch does. This keeps a single deployment pipeline.
+      - name: Start Pages deployment
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF: ${{ github.ref_name }}
+        run: gh workflow run deploy.yml --ref "$REF"

@@ -1,2 +1,19 @@
-# Keep your API key private
+# Local secret config. Never commit this file.
+# Public runtime configuration belongs in config.public.js.
 config.js
+.dev.vars
+worker/.dev.vars
+.env
+.env.*
+!.env.example
+
+# Exported AI chat sessions can contain tool output; keep them local.
+security-audit-and-pages-deployment.json
+# Build output and local tooling
+dist/
+node_modules/
+.wrangler/
+worker/.wrangler/
+
+.dev.vars*
+!.dev.vars.example

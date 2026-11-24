@@ -60,20 +60,22 @@ TerraExplorer is a zero-build, vanilla web app for discovering countries through
 
 ## Getting Started
 
-1. Get a free **Gemini API key** at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
-2. *(Optional)* Get a free **Unsplash Access Key** at [unsplash.com/developers](https://unsplash.com/developers)
-3. Create `config.js` in the project root:
-   ```js
-   const GEMINI_API_KEY = 'your-gemini-key';
-   const UNSPLASH_ACCESS_KEY = 'your-unsplash-key';
-   ```
-4. Serve with any HTTP server:
+The site is static. API keys never go in the browser: Gemini and Unsplash are called by a small Cloudflare Worker in `worker/`, and the site only knows the Worker's public URL.
+
+1. Serve the site with any HTTP server:
    ```
    python -m http.server 8080
    ```
-5. Open `http://localhost:8080`
+2. Open `http://localhost:8080`. Country data, flags, maps and visited tracking work without any key.
+3. *(Optional, for AI facts and photos)* run the Worker locally:
+   ```
+   cd worker
+   copy .dev.vars.example .dev.vars   # then put your own keys in .dev.vars
+   npx wrangler@4 dev --port 8787
+   ```
+   and set `apiBaseUrl: 'http://localhost:8787'` in `config.public.js` (do not commit that change).
 
-> `config.js` is gitignored - never commit API keys to a public repo.
+> Never put API keys in `config.public.js`, HTML, or any file served by GitHub Pages. `.dev.vars` and `config.js` are gitignored.
 
 ## Tech Stack
 
@@ -83,13 +85,12 @@ TerraExplorer is a zero-build, vanilla web app for discovering countries through
 | Styling | CSS3 - custom properties, flexbox, grid, glassmorphism, `backdrop-filter` |
 | Logic | Vanilla JavaScript (ES6+, async/await, Fetch API) |
 | Country Data | Bundled locally (`countries-data.js`) — from [mledoze/countries](https://github.com/mledoze/countries), flags via [flagcdn](https://flagcdn.com/), population via [World Bank](https://data.worldbank.org/) |
-| AI | [Google Gemini API](https://ai.google.dev/) - multi-model fallback chain |
-| Photos | [Unsplash API](https://unsplash.com/developers) |
+| AI | [Google Gemini API](https://ai.google.dev/) via Cloudflare Worker proxy - multi-model fallback chain |
+| Photos | [Unsplash API](https://unsplash.com/developers) via Cloudflare Worker proxy |
 | Maps (embed) | Google Maps embedded iframe |
 | Maps (interactive) | [Leaflet.js 1.9.4](https://leafletjs.com/) + [TopoJSON](https://github.com/topojson/topojson) |
 | Background Animation | [GSAP / TweenMax 2.1.3](https://greensock.com/gsap/) |
 | Lottie Animations | [@lottiefiles/lottie-player 2.0.8](https://lottiefiles.com/) |
-| DOM Helpers | jQuery 3.7.1 |
 | Storage | `localStorage` (visited, history, flags, theme) |
 
 ## File Structure
@@ -98,16 +99,23 @@ TerraExplorer is a zero-build, vanilla web app for discovering countries through
 TerraExplorer/
 ├── index.html          Explorer Mode (HTML + CSS + JS, single file)
 ├── map.html            Discover Mode - interactive world map
-├── config.js           API keys (gitignored)
+├── 404.html            GitHub Pages not-found page
+├── config.public.js    Public runtime config (Worker URL only, no secrets)
 ├── countries-data.js   Bundled country dataset (names, flags, stats, coords)
 ├── earth-anim.json     Lottie animation data (header icon)
 ├── map-anim.json       Lottie animation data (map nav icon)
-├── earth.lottie        Original .lottie source
-├── map.lottie          Original .lottie source
-├── Earth.gif           README hero image
+├── earth.lottie        Original .lottie source (not deployed)
+├── map.lottie          Original .lottie source (not deployed)
+├── Earth.gif           README hero image (not deployed)
+├── worker/             Cloudflare Worker API proxy (holds the secrets)
+├── scripts/
+│   ├── build-site.mjs     Builds and validates the deployable dist/ folder
+│   ├── security-scan.mjs  Fails the build if credentials are found
+│   └── build-data.mjs     Rebuilds countries-data.js
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml  GitHub Pages CI/CD
+│       ├── deploy.yml       Build + deploy to GitHub Pages
+│       └── update-data.yml  Weekly data refresh
 ├── .gitignore
 ├── LICENSE
 └── README.md
@@ -115,13 +123,20 @@ TerraExplorer/
 
 ## Deployment
 
-The project ships with a **GitHub Actions workflow** that deploys to GitHub Pages automatically on every push to `main`.
+**API Worker (once):**
 
-1. Go to your repo → **Settings → Secrets and variables → Actions**
-2. Add two secrets: `GEMINI_API_KEY` and `UNSPLASH_ACCESS_KEY`
-3. Push to `main` - the workflow injects the keys into `config.js` and deploys
+1. `cd worker` and run `npx wrangler@4 login`
+2. `npx wrangler@4 secret put GEMINI_API_KEY` and `npx wrangler@4 secret put UNSPLASH_ACCESS_KEY` (paste the keys when prompted)
+3. `npx wrangler@4 deploy` and note the `https://terraexplorer-api.<subdomain>.workers.dev` URL
+4. If the site is served from another origin, add it to `ALLOWED_ORIGINS` in `worker/wrangler.toml`
 
-Also works on any static host (Vercel, Netlify, Cloudflare Pages) - just make sure `config.js` is present at runtime.
+**GitHub Pages:**
+
+1. **Settings → Pages → Source:** GitHub Actions
+2. **Settings → Secrets and variables → Actions → Variables:** add `PUBLIC_API_BASE_URL` = the Worker URL (a variable, not a secret; it is public)
+3. Push to `main`. `deploy.yml` runs `node scripts/build-site.mjs`, which copies only the public files into `dist/`, checks local links, scans for secrets, and then deploys `dist/`.
+
+Build locally with `node scripts/build-site.mjs`; the output in `dist/` can be served by any static host.
 
 ## License
 

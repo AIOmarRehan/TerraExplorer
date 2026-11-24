@@ -25,10 +25,12 @@
   <meta name="msapplication-config" content="browserconfig.xml" />
   <!-- Theme -->
   <meta name="theme-color" content="#6C63FF" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/@lottiefiles/lottie-player@2.0.8/dist/lottie-player.js"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/topojson-client@3"></script>
+  <!-- Defense-in-depth only: the app intentionally uses inline scripts/styles. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: http://localhost:* http://127.0.0.1:* blob:; frame-src https://www.google.com https://maps.google.com; media-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
+  <script src="https://unpkg.com/@lottiefiles/lottie-player@2.0.8/dist/lottie-player.js" integrity="sha384-IntiqSJhM3wcHA/7O7MOj9GM6+qIPnjxugImfm81JveaSWrT7m3K0CfsWwOscMCu" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" integrity="sha384-Ukv1p/xTma6P4/2bY5KzWBw+ydSpXmhCMtyciIQVDJ1RmOxtCYNMF1uXT9T63H67" crossorigin="anonymous"></script>
   <style>
     /* ===== THEME VARIABLES (shared with index.html) ===== */
     :root {
@@ -605,6 +607,34 @@
     [data-theme="light"] .country-images-grid img {
       background: rgba(0,0,0,0.05);
     }
+    .country-images-grid figure {
+      position: relative;
+      margin: 0;
+      min-width: 0;
+      overflow: hidden;
+      border-radius: 6px;
+    }
+    .country-images-grid figure img { display: block; }
+    .photo-credit {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 0.7rem 0.35rem 0.2rem;
+      background: linear-gradient(transparent, rgba(0,0,0,0.72));
+      color: #fff;
+      font-size: 0.55rem;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      pointer-events: none;
+    }
+    .photo-credit a {
+      color: #fff;
+      text-decoration: underline;
+      pointer-events: auto;
+    }
 
     /* Lightbox */
     .img-lightbox {
@@ -640,6 +670,12 @@
       position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
       color: rgba(255,255,255,0.6); font-size: 0.85rem;
     }
+    .img-lightbox-credit {
+      position: absolute; bottom: 44px; left: 50%; transform: translateX(-50%);
+      max-width: 90vw; color: rgba(255,255,255,0.75); font-size: 0.75rem;
+      text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .img-lightbox-credit a { color: #fff; }
     .country-images-refresh {
       display: inline-flex; align-items: center; gap: 0.3rem;
       background: none; border: 1px solid rgba(255,255,255,0.15);
@@ -1053,14 +1089,36 @@
     </div>
   </div>
 
-  <script src="config.js"></script>
+  <script src="config.public.js"></script>
   <script src="countries-data.js"></script>
   <script>
     (function () {
       'use strict';
 
+      // --- Public API configuration (never contains secrets) ---
+      function readApiBaseUrl() {
+        var raw = '';
+        try {
+          var config = window.TERRAEXPLORER_CONFIG;
+          if (config && typeof config.apiBaseUrl === 'string') raw = config.apiBaseUrl;
+        } catch (_) {}
+        raw = raw.trim().replace(/\/+$/, '');
+        if (!raw) return '';
+        try {
+          var parsed = new URL(raw, window.location.href);
+          if (parsed.username || parsed.password || parsed.search || parsed.hash) return '';
+          if (parsed.pathname && parsed.pathname !== '/') return '';
+          if (parsed.protocol === 'https:') return parsed.origin;
+          if (parsed.protocol === 'http:' &&
+              (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')) {
+            return parsed.origin;
+          }
+        } catch (_) {}
+        return '';
+      }
+
       // --- Config ---
-      const apiKey = (typeof GEMINI_API_KEY !== 'undefined' && GEMINI_API_KEY !== 'YOUR_API_KEY_HERE') ? GEMINI_API_KEY : '';
+      const apiBaseUrl = readApiBaseUrl();
       var isTouch = (window.L && L.Browser && L.Browser.touch) || ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
       let isDark = true;
       let countriesCache = null;
@@ -1125,13 +1183,19 @@
       (function loadFlaggedCountries() {
         try {
           var saved = JSON.parse(localStorage.getItem('flagged_countries_list') || '[]');
-          if (Array.isArray(saved)) saved.forEach(function (n) { flaggedCountries.add(n); });
+          if (Array.isArray(saved)) {
+            saved.forEach(function (name) {
+              if (typeof name === 'string') flaggedCountries.add(name);
+            });
+          }
         } catch (e) {}
       })();
 
       function saveFlaggedCount() {
-        localStorage.setItem('flagged_countries_count', flaggedCountries.size.toString());
-        localStorage.setItem('flagged_countries_list', JSON.stringify(Array.from(flaggedCountries)));
+        try {
+          localStorage.setItem('flagged_countries_count', flaggedCountries.size.toString());
+          localStorage.setItem('flagged_countries_list', JSON.stringify(Array.from(flaggedCountries)));
+        } catch (_) {}
       }
 
       // --- Theme ---
@@ -1156,12 +1220,16 @@
 
       // --- Visited helpers (shared localStorage with index.html) ---
       function getVisited() {
-        try { return JSON.parse(localStorage.getItem('visited_countries')) || []; }
-        catch { return []; }
+        try {
+          var value = JSON.parse(localStorage.getItem('visited_countries'));
+          return Array.isArray(value) ? value.filter(function (name) { return typeof name === 'string'; }) : [];
+        } catch (_) {
+          return [];
+        }
       }
 
       function saveVisited(list) {
-        localStorage.setItem('visited_countries', JSON.stringify(list));
+        try { localStorage.setItem('visited_countries', JSON.stringify(list)); } catch (_) {}
       }
 
       function isVisited(name) {
@@ -1560,8 +1628,11 @@
           }
         } catch (_) {}
 
-        if (incomingPayload && incomingPayload.country) {
-          var incomingCountry = incomingPayload.country;
+        if (incomingPayload && typeof incomingPayload === 'object' &&
+            typeof incomingPayload.country === 'string' && incomingPayload.country.trim()) {
+          var incomingCountry = incomingPayload.country.trim().slice(0, 80);
+          var passedFact = typeof incomingPayload.funFact === 'string' ? incomingPayload.funFact.slice(0, 600) : '';
+          var passedDish = typeof incomingPayload.dish === 'string' ? incomingPayload.dish.slice(0, 600) : '';
           // Find the first layer matching this country
           var targetLayer = null;
           var inLower = incomingCountry.toLowerCase();
@@ -1608,7 +1679,7 @@
             selectedLayer = targetLayer;
             currentCountry = country;
 
-            var hasPassedFacts = !!(incomingPayload.funFact || incomingPayload.dish);
+            var hasPassedFacts = !!(passedFact || passedDish);
             showDetail(country, hasPassedFacts);
 
             // Fly to bounds (slight delay ensures map is rendered)
@@ -1632,8 +1703,8 @@
             // Pre-fill AI facts from passed data (skip Gemini call)
             if (hasPassedFacts) {
               aiLoading.style.display = 'none';
-              funFactText.textContent = incomingPayload.funFact || 'No fun fact available.';
-              dishText.textContent = incomingPayload.dish || 'No dish information available.';
+              funFactText.textContent = passedFact || 'No fun fact available.';
+              dishText.textContent = passedDish || 'No dish information available.';
               aiContent.style.display = '';
             }
           }
@@ -1973,73 +2044,164 @@
       var _imgPage = 1;
       var _imgTotalPages = 1;
 
+      var _photoAbort = null;
+      var _photoRequestSeq = 0;
+
+      function safePhotoImageUrl(value) {
+        if (typeof value !== 'string') return '';
+        try {
+          var parsed = new URL(value);
+          if (parsed.protocol !== 'https:') return '';
+          if (parsed.hostname !== 'images.unsplash.com' && parsed.hostname !== 'plus.unsplash.com') return '';
+          return parsed.toString();
+        } catch (_) { return ''; }
+      }
+
+      function safeUnsplashLink(value) {
+        if (typeof value !== 'string') return '';
+        try {
+          var parsed = new URL(value);
+          if (parsed.protocol !== 'https:') return '';
+          if (parsed.hostname !== 'unsplash.com' && parsed.hostname !== 'www.unsplash.com') return '';
+          return parsed.toString();
+        } catch (_) { return ''; }
+      }
+
+      function renderPhotoCredit(container, photo, prefix) {
+        container.textContent = '';
+        if (!photo) return;
+        var name = typeof photo.userName === 'string' && photo.userName.trim()
+          ? photo.userName.trim().slice(0, 120)
+          : 'Unsplash contributor';
+        var userLink = safeUnsplashLink(photo.userLink);
+        var pageLink = safeUnsplashLink(photo.pageUrl) || 'https://unsplash.com/';
+        if (prefix) container.appendChild(document.createTextNode(prefix));
+        if (userLink) {
+          var userAnchor = document.createElement('a');
+          userAnchor.href = userLink;
+          userAnchor.target = '_blank';
+          userAnchor.rel = 'noopener noreferrer';
+          userAnchor.textContent = name;
+          container.appendChild(userAnchor);
+        } else {
+          container.appendChild(document.createTextNode(name));
+        }
+        container.appendChild(document.createTextNode(' on '));
+        var pageAnchor = document.createElement('a');
+        pageAnchor.href = pageLink;
+        pageAnchor.target = '_blank';
+        pageAnchor.rel = 'noopener noreferrer';
+        pageAnchor.textContent = 'Unsplash';
+        container.appendChild(pageAnchor);
+      }
+
+      function showPhotoGridMessage(grid, message, opacity) {
+        grid.textContent = '';
+        var span = document.createElement('span');
+        span.style.gridColumn = '1/-1';
+        span.style.textAlign = 'center';
+        span.style.opacity = String(opacity);
+        span.style.fontSize = '0.8rem';
+        span.textContent = message;
+        grid.appendChild(span);
+      }
+
       function showPhotosInGrid(photos, countryName) {
         var grid = document.getElementById('countryImagesGrid');
         if (!grid) return;
-        grid.innerHTML = '';
+        grid.textContent = '';
+        var gallery = photos.map(function (p) { return p.regular; });
         photos.forEach(function (photo, idx) {
+          var figure = document.createElement('figure');
           var img = document.createElement('img');
           img.alt = photo.alt || countryName;
           img.loading = 'lazy';
+          img.decoding = 'async';
           img.src = photo.small;
-          img.onerror = function () { this.style.display = 'none'; };
+          img.onerror = function () { figure.style.display = 'none'; };
           img.onclick = function () {
-            openLightbox(photos.map(function (p) { return p.regular; }), idx);
+            openLightbox(gallery, idx);
           };
-          grid.appendChild(img);
+          figure.appendChild(img);
+
+          var credit = document.createElement('figcaption');
+          credit.className = 'photo-credit';
+          renderPhotoCredit(credit, photo, '\u00a9 ');
+          figure.appendChild(credit);
+          grid.appendChild(figure);
         });
       }
 
       function loadCountryImages(countryName) {
         var grid = document.getElementById('countryImagesGrid');
         if (!grid) return;
-        if (!UNSPLASH_ACCESS_KEY) {
-          grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.5;font-size:0.8rem">Add your Unsplash key in config.js</span>';
+        if (!apiBaseUrl) {
+          _currentImgCountry = '';
+          showPhotoGridMessage(grid, 'Photo service is not configured.', 0.5);
           return;
         }
         _currentImgCountry = countryName;
         _imgPage = 1;
         _imgTotalPages = 1;
-        _fetchUnsplashPage(countryName, 1, grid);
+        _fetchPhotoPage(countryName, 1, grid);
       }
 
-      function _fetchUnsplashPage(countryName, page, grid) {
-        grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.5;font-size:0.8rem">Loading photos...</span>';
+      function _fetchPhotoPage(countryName, page, grid) {
+        if (_photoAbort) _photoAbort.abort();
+        var controller = new AbortController();
+        _photoAbort = controller;
+        var requestId = ++_photoRequestSeq;
 
-        var url = 'https://api.unsplash.com/search/photos?query=' +
-          encodeURIComponent(countryName) +
-          '&per_page=20&page=' + page + '&client_id=' + UNSPLASH_ACCESS_KEY;
+        showPhotoGridMessage(grid, 'Loading photos...', 0.5);
+        var url = apiBaseUrl + '/api/photos?query=' + encodeURIComponent(countryName) + '&page=' + page;
 
-        fetch(url)
-          .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        fetch(url, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          credentials: 'omit',
+          mode: 'cors',
+          signal: controller.signal
+        })
+          .then(function (response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.json();
+          })
           .then(function (data) {
-            _imgTotalPages = data.total_pages || 1;
-            var results = data.results || [];
-            if (results.length === 0) {
-              grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.4;font-size:0.8rem">No photos found</span>';
+            if (requestId !== _photoRequestSeq) return;
+            _imgTotalPages = Math.max(1, Math.min(50, Number(data && data.totalPages) || 1));
+            var results = data && Array.isArray(data.photos) ? data.photos : [];
+            var photos = results.map(function (photo) {
+              return {
+                small: safePhotoImageUrl(photo && photo.small),
+                regular: safePhotoImageUrl(photo && photo.regular),
+                alt: photo && typeof photo.alt === 'string' ? photo.alt.slice(0, 240) : countryName,
+                userName: photo && typeof photo.userName === 'string' ? photo.userName.slice(0, 120) : '',
+                userLink: photo ? safeUnsplashLink(photo.userLink) : '',
+                pageUrl: photo ? safeUnsplashLink(photo.pageUrl) : ''
+              };
+            }).filter(function (photo) { return photo.small && photo.regular; });
+
+            if (photos.length === 0) {
               _allCountryPhotos = [];
+              showPhotoGridMessage(grid, 'No photos found', 0.4);
               return;
             }
-            _allCountryPhotos = results.map(function (r) {
-              return {
-                small: r.urls.small,
-                regular: r.urls.regular,
-                alt: r.alt_description || countryName
-              };
-            });
-            showPhotosInGrid(_allCountryPhotos, countryName);
+            _allCountryPhotos = photos;
+            showPhotosInGrid(photos, countryName);
           })
-          .catch(function (err) {
-            grid.innerHTML = '<span style="grid-column:1/-1;text-align:center;opacity:0.4;font-size:0.8rem">Could not load photos</span>';
+          .catch(function (error) {
+            if (error && error.name === 'AbortError') return;
+            if (requestId !== _photoRequestSeq) return;
+            showPhotoGridMessage(grid, 'Could not load photos', 0.4);
           });
       }
 
       document.getElementById('refreshImagesBtn').addEventListener('click', function () {
-        if (_currentImgCountry && UNSPLASH_ACCESS_KEY) {
+        if (_currentImgCountry && apiBaseUrl) {
           _imgPage++;
           if (_imgPage > _imgTotalPages) _imgPage = 1;
           var grid = document.getElementById('countryImagesGrid');
-          _fetchUnsplashPage(_currentImgCountry, _imgPage, grid);
+          _fetchPhotoPage(_currentImgCountry, _imgPage, grid);
         }
       });
 
@@ -2167,7 +2329,7 @@
         funFactText.textContent = '';
         dishText.textContent = '';
 
-        if (apiKey && !skipAI) {
+        if (apiBaseUrl && !skipAI) {
           fetchAIContent(country.name.common);
         }
 
@@ -2239,9 +2401,11 @@
         throw new Error('Country data failed to load. Make sure countries-data.js is present.');
       }
 
-      // --- Gemini AI ---
+      // --- AI insights (secure Worker proxy; no key in the browser) ---
+      var _aiRequestSeq = 0;
       async function fetchAIContent(countryNameStr) {
-        if (!apiKey) return;
+        if (!apiBaseUrl) return;
+        var requestId = ++_aiRequestSeq;
 
         // Check cache first (expires after 24h for fresh content)
         var cacheKey = 'ai_cache_' + countryNameStr.toLowerCase().replace(/\s+/g, '_');
@@ -2249,9 +2413,11 @@
           var cached = localStorage.getItem(cacheKey);
           if (cached) {
             var cacheData = JSON.parse(cached);
-            if (cacheData._ts && Date.now() - cacheData._ts < 86400000) {
-              funFactText.textContent = cacheData.funFact || 'No fun fact available.';
-              dishText.textContent = cacheData.dish || 'No dish information available.';
+            if (cacheData && cacheData._ts && Date.now() - cacheData._ts < 86400000 &&
+                typeof cacheData.funFact === 'string' && typeof cacheData.dish === 'string' &&
+                cacheData.funFact.trim() && cacheData.dish.trim()) {
+              funFactText.textContent = cacheData.funFact;
+              dishText.textContent = cacheData.dish;
               aiLoading.style.display = 'none';
               aiContent.style.display = '';
               return;
@@ -2264,87 +2430,51 @@
         aiLoading.innerHTML = '<span class="spinner"></span> Fetching AI insights...';
         aiContent.style.display = 'none';
 
-        var models = ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview'];
-        var baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/';
-
-        var body = {
-          contents: [{
-            parts: [{
-              text: 'You are a geography and culture expert. For the country "' + countryNameStr + '" specifically (not any other country), provide:\n1. One unique, surprising, and ACCURATE fun fact that is specific ONLY to ' + countryNameStr + '. Do NOT reuse generic facts that could apply to multiple countries.\n2. One authentic traditional local dish that originates from ' + countryNameStr + ', with a brief description of what it is.\nRespond ONLY with valid JSON, no markdown, no explanation: { "funFact": "...", "dish": "..." }'
-            }]
-          }],
-          generationConfig: {
-            temperature: 1.2
-          }
-        };
-
+        var controller = new AbortController();
+        var timeoutId = setTimeout(function () { controller.abort(); }, 30000);
         var resp;
-        var modelIdx = 0;
-
-        while (true) {
-          var url = baseUrl + models[modelIdx] + ':generateContent?key=' + apiKey;
-
-          // 8-second timeout per model attempt
-          var controller = new AbortController();
-          var timeoutId = setTimeout(function () { controller.abort(); }, 8000);
-
-          try {
-            resp = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(body),
-              signal: controller.signal
-            });
-          } catch (fetchErr) {
-            clearTimeout(timeoutId);
-            if (modelIdx < models.length - 1) {
-              modelIdx++;
-              aiLoading.innerHTML = '<span class="spinner"></span> Switching model...';
-              continue;
-            }
-            aiLoading.style.display = 'none';
-            return;
-          }
+        try {
+          resp = await fetch(apiBaseUrl + '/api/ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ country: countryNameStr }),
+            credentials: 'omit',
+            mode: 'cors',
+            cache: 'no-store',
+            signal: controller.signal
+          });
+        } catch (_) {
           clearTimeout(timeoutId);
+          if (requestId === _aiRequestSeq) aiLoading.style.display = 'none';
+          return;
+        }
+        clearTimeout(timeoutId);
+        if (requestId !== _aiRequestSeq) return;
 
-          if (resp.status === 429 || resp.status === 503) {
-            if (modelIdx < models.length - 1) {
-              modelIdx++;
-              aiLoading.innerHTML = '<span class="spinner"></span> High Demand — switching model...';
-              continue;
-            }
-            aiLoading.style.display = 'none';
-            return;
-          }
-
-          if (!resp.ok) {
-            if (modelIdx < models.length - 1) { modelIdx++; continue; }
-            aiLoading.style.display = 'none';
-            return;
-          }
-          break;
+        if (!resp.ok) {
+          aiLoading.style.display = 'none';
+          return;
         }
 
         try {
           var data = await resp.json();
-          var text = '';
-          if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-            text = data.candidates[0].content.parts.map(function (p) { return p.text || ''; }).join('');
-          }
-          var jsonMatch = text.match(/\{[\s\S]*\}/);
-          if (!jsonMatch) {
+          if (requestId !== _aiRequestSeq) return;
+          if (!data || typeof data.funFact !== 'string' || typeof data.dish !== 'string' ||
+              !data.funFact.trim() || !data.dish.trim()) {
             funFactText.textContent = 'Could not parse AI response.';
             dishText.textContent = 'Could not parse AI response.';
             aiLoading.style.display = 'none';
             aiContent.style.display = '';
             return;
           }
-          var parsed = JSON.parse(jsonMatch[0]);
-          // Cache the result with timestamp
-          parsed._ts = Date.now();
+          var parsed = {
+            funFact: data.funFact.trim().slice(0, 600),
+            dish: data.dish.trim().slice(0, 600),
+            _ts: Date.now()
+          };
           try { localStorage.setItem(cacheKey, JSON.stringify(parsed)); } catch (_) {}
-          funFactText.textContent = parsed.funFact || 'No fun fact available.';
-          dishText.textContent = parsed.dish || 'No dish information available.';
+          funFactText.textContent = parsed.funFact;
+          dishText.textContent = parsed.dish;
           aiLoading.style.display = 'none';
           aiContent.style.display = '';
         } catch (err) {

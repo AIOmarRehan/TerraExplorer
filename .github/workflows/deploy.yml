@@ -1,44 +1,67 @@
-
 name: Deploy to GitHub Pages
 
 on:
   push:
     branches: [main]
+  workflow_dispatch: # manual runs, and the weekly data refresh starts this workflow
 
+# Least privilege by default. Only the deploy job gets Pages permissions.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
+# One Pages deployment at a time. Never cancel a deployment that is already
+# running: a cancelled Pages deployment can leave the site in a failed state.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
+  build:
+    name: Build and validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Scan repository for committed secrets
+        run: node scripts/security-scan.mjs
+
+      # Copies only the public site files into dist/, writes the public Worker
+      # URL into dist/config.public.js, checks every local src/href, and fails
+      # if any credential or direct Gemini/Unsplash call is in the artifact.
+      - name: Build site into dist/
+        env:
+          PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
+        run: node scripts/build-site.mjs
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
   deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
-    runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Inject API keys
-        run: |
-          echo "const GEMINI_API_KEY = '${{ secrets.GEMINI_API_KEY }}';" > config.js
-          echo "const UNSPLASH_ACCESS_KEY = '${{ secrets.UNSPLASH_ACCESS_KEY }}';" >> config.js
-
       - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload GitHub Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
+        uses: actions/configure-pages@v6
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
